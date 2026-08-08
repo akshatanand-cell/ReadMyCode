@@ -1,0 +1,29 @@
+{
+  "name": "readmycode-server",
+  "version": "1.0.0",
+  "description": "AI-powered GitHub repo analyzer - backend (README, API docs, flowcharts, architecture, function explanations, debugger)",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "@babel/parser": "^7.25.0",
+    "@babel/traverse": "^7.25.0",
+    "adm-zip": "^0.5.16",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "mongodb-memory-server": "^11.2.0",
+    "mongoose": "^8.5.0",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1",
+    "simple-git": "^3.25.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.4"
+  }
+}
