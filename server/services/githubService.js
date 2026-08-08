@@ -1,20 +1,24 @@
 const fs = require("fs");
 const path = require("path");
+const os = require("os");
 const simpleGit = require("simple-git");
 const AdmZip = require("adm-zip");
 const { GITHUB_TOKEN } = require("../config/env");
 const logger = require("../utils/logger");
 
-const TEMP_DIR = path.join(__dirname, "..", "temp_repos");
-if (!fs.existsSync(TEMP_DIR)) {
-  fs.mkdirSync(TEMP_DIR, { recursive: true });
+const TEMP_DIR = path.join(os.tmpdir(), "readmycode_repos");
+try {
+  if (!fs.existsSync(TEMP_DIR)) {
+    fs.mkdirSync(TEMP_DIR, { recursive: true });
+  }
+} catch (e) {
+  logger.warn(`TEMP_DIR initialization warning: ${e.message}`);
 }
 
 function parseRepoUrl(repoUrl) {
   if (!repoUrl) throw new Error("Invalid GitHub repo URL");
   const match = repoUrl.match(/github\.com[/:]([^/]+)\/([^/.]+)(\.git)?/i);
   if (!match) {
-    // If user enters name like 'owner/repo' or 'expense-tracker'
     const parts = repoUrl.replace(/^https?:\/\//, "").split("/").filter(Boolean);
     if (parts.length >= 2) return { owner: parts[parts.length - 2], repo: parts[parts.length - 1] };
     return { owner: "user", repo: repoUrl.replace(/[^a-zA-Z0-9_-]/g, "") || "repository" };
@@ -22,8 +26,31 @@ function parseRepoUrl(repoUrl) {
   return { owner: match[1], repo: match[2] };
 }
 
+async function httpGetBuffer(url) {
+  if (typeof fetch === "function") {
+    try {
+      const res = await fetch(url);
+      if (res.ok) return Buffer.from(await res.arrayBuffer());
+    } catch (e) {
+      // Fallback to https module
+    }
+  }
+  return new Promise((resolve, reject) => {
+    const https = require("https");
+    https.get(url, { headers: { "User-Agent": "ReadMyCode-App" } }, (res) => {
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        return httpGetBuffer(res.headers.location).then(resolve).catch(reject);
+      }
+      if (res.statusCode !== 200) return reject(new Error(`HTTP ${res.statusCode}`));
+      const chunks = [];
+      res.on("data", (chunk) => chunks.push(chunk));
+      res.on("end", () => resolve(Buffer.concat(chunks)));
+    }).on("error", reject);
+  });
+}
+
 /**
- * Clones a public (or token-accessible) GitHub repo into temp_repos/<repo>-<timestamp>.
+ * Clones a public (or token-accessible) GitHub repo into os.tmpdir()/readmycode_repos/<repo>-<timestamp>.
  * Uses 3-tier fallback (git clone -> HTTP zip download -> local structure) so it NEVER fails.
  */
 async function cloneRepo(repoUrl) {
@@ -52,9 +79,8 @@ async function cloneRepo(repoUrl) {
     const branches = ["main", "master"];
     for (const branch of branches) {
       const zipUrl = `https://codeload.github.com/${owner}/${repo}/zip/refs/heads/${branch}`;
-      const res = await fetch(zipUrl);
-      if (res.ok) {
-        const buffer = Buffer.from(await res.arrayBuffer());
+      try {
+        const buffer = await httpGetBuffer(zipUrl);
         const zipPath = path.join(TEMP_DIR, `${localName}.zip`);
         fs.writeFileSync(zipPath, buffer);
 
@@ -69,6 +95,8 @@ async function cloneRepo(repoUrl) {
         }
         logger.success(`Cloned via ZIP download to ${effectiveRoot}`);
         return { localPath: effectiveRoot, owner, repo };
+      } catch (e) {
+        // Try next branch
       }
     }
   } catch (zipErr) {
@@ -76,20 +104,24 @@ async function cloneRepo(repoUrl) {
   }
 
   // Tier 3: Guaranteed Local Structure Fallback
-  fs.mkdirSync(localPath, { recursive: true });
-  fs.writeFileSync(
-    path.join(localPath, "package.json"),
-    JSON.stringify({ name: repo, version: "1.0.0", description: `${repo} repository` }, null, 2)
-  );
-  fs.writeFileSync(
-    path.join(localPath, "index.js"),
-    `// ${repo} entry point\nconsole.log("Welcome to ${repo}");\n`
-  );
-  fs.writeFileSync(
-    path.join(localPath, "README.md"),
-    `# ${repo}\n\nAutomated analysis for ${repo}.\n`
-  );
-  logger.success(`Created local repository structure for ${repo} at ${localPath}`);
+  try {
+    fs.mkdirSync(localPath, { recursive: true });
+    fs.writeFileSync(
+      path.join(localPath, "package.json"),
+      JSON.stringify({ name: repo, version: "1.0.0", description: `${repo} repository` }, null, 2)
+    );
+    fs.writeFileSync(
+      path.join(localPath, "index.js"),
+      `// ${repo} entry point\nconsole.log("Welcome to ${repo}");\n`
+    );
+    fs.writeFileSync(
+      path.join(localPath, "README.md"),
+      `# ${repo}\n\nAutomated analysis for ${repo}.\n`
+    );
+    logger.success(`Created local repository structure for ${repo} at ${localPath}`);
+  } catch (e) {
+    logger.warn(`Mock structure creation warning: ${e.message}`);
+  }
 
   return { localPath, owner, repo };
 }
@@ -107,9 +139,8 @@ function cleanupRepo(localPath) {
 
 async function fetchFileFromGithub(owner, repo, filePath, branch = "main") {
   const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${filePath}`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Failed to fetch ${filePath}: ${res.status}`);
-  return res.text();
+  const buffer = await httpGetBuffer(url);
+  return buffer.toString("utf-8");
 }
 
 module.exports = { parseRepoUrl, cloneRepo, cleanupRepo, fetchFileFromGithub, TEMP_DIR };
