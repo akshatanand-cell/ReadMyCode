@@ -6,15 +6,23 @@ const logger = require("../utils/logger");
 mongoose.set("bufferCommands", false);
 
 async function connectDB() {
+  if (mongoose.connection.readyState === 1) return;
+
   // 1. Try primary MONGO_URI
   if (MONGO_URI && MONGO_URI.startsWith("mongodb")) {
     try {
-      await mongoose.connect(MONGO_URI, { serverSelectionTimeoutMS: 1500 });
+      await mongoose.connect(MONGO_URI, { serverSelectionTimeoutMS: 2000 });
       logger.success(`MongoDB connected: ${mongoose.connection.host}`);
       return;
     } catch (err) {
-      logger.warn(`Primary MONGO_URI connection failed. Trying local fallback...`);
+      logger.warn(`Primary MONGO_URI connection failed.`);
     }
+  }
+
+  // If running on Vercel or cloud serverless, skip binary MongoMemoryServer immediately
+  if (process.env.VERCEL || process.env.NOW_REGION) {
+    logger.info("Running on Vercel Serverless. Operating with instant MemoryStore.");
+    return;
   }
 
   // 2. Try local MongoDB

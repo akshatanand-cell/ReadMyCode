@@ -54,7 +54,7 @@ async function analyzeRepo(req, res, next) {
     });
   } catch (err) {
     logger.error(`analyzeRepo failed: ${err.message}`);
-    next(err);
+    return res.status(500).json({ message: err.message || "Failed to analyze repository" });
   }
 }
 
