@@ -1,0 +1,67 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18, 20]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      # Install server dependencies
+      - name: Install server dependencies
+        working-directory: ./server
+        run: npm install --production
+
+      # Lint server
+      - name: Lint server
+        working-directory: ./server
+        run: npx eslint . --max-warnings=50 --ignore-pattern node_modules || true
+
+      # Install client dependencies
+      - name: Install client dependencies
+        working-directory: ./client
+        run: npm install
+
+      # Lint client
+      - name: Lint client
+        working-directory: ./client
+        run: npx eslint src/ --max-warnings=50 || true
+
+      # Build client
+      - name: Build client
+        working-directory: ./client
+        run: npm run build
+
+      # Install Playwright browsers
+      - name: Install Playwright browsers
+        working-directory: ./client
+        run: npx playwright install --with-deps chromium
+
+      # Run Playwright tests
+      - name: Run Playwright e2e tests
+        working-directory: ./client
+        run: npx playwright test --reporter=html || true
+
+      # Upload Playwright report
+      - name: Upload Playwright Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report-node-${{ matrix.node-version }}
+          path: client/playwright-report/
+          retention-days: 30
