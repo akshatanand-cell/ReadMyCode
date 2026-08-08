@@ -1,9 +1,15 @@
 const multer = require("multer");
 const path = require("path");
+const os = require("os");
+const fs = require("fs");
 
-// Used for the alternate "upload a zip" flow instead of a GitHub URL.
+const TEMP_DIR = path.join(os.tmpdir(), "readmycode_repos");
+try {
+  if (!fs.existsSync(TEMP_DIR)) fs.mkdirSync(TEMP_DIR, { recursive: true });
+} catch (e) {}
+
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, path.join(__dirname, "..", "temp_repos")),
+  destination: (req, file, cb) => cb(null, TEMP_DIR),
   filename: (req, file, cb) => cb(null, `${Date.now()}-${file.originalname}`),
 });
 
