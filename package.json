@@ -4,7 +4,7 @@
   "description": "ReadMyCode AI Documentation Generator",
   "main": "server/server.js",
   "scripts": {
-    "build": "cd client && npm install && npm run build",
+    "build": "cd server && npm install --production && cd ../client && npm install && npm run build",
     "start": "node server/server.js",
     "dev": "cd client && npm run dev"
   },
