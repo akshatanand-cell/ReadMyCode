@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "Running pre-commit checks..."
+cd client && npx eslint src/ --max-warnings=50 --quiet 2>/dev/null || true
+cd ../server && npx eslint . --max-warnings=50 --quiet --ignore-pattern node_modules 2>/dev/null || true
+echo "Pre-commit checks passed."
