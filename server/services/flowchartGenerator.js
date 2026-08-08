@@ -12,7 +12,7 @@ function extractMermaid(text) {
  */
 async function generateFlowchart({ repoName, tree, entryFileContent }) {
   const prompt = flowchartPrompt({ repoName, tree, entryFileContent });
-  const raw = await callAI(prompt, { maxTokens: 1500 });
+  const raw = await callAI(prompt, { maxTokens: 1500, type: "flowchart" });
   return extractMermaid(raw);
 }
 

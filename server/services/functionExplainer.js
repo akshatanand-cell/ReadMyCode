@@ -19,7 +19,7 @@ async function explainFunctions(files, { limit = 25 } = {}) {
       count++;
       try {
         const prompt = functionExplainPrompt({ filePath: file.filePath, functionCode: fn.code });
-        const explanation = await callAIJson(prompt, { maxTokens: 500 });
+        const explanation = await callAIJson(prompt, { maxTokens: 500, type: "functionExplain" });
         explanations.push({
           filePath: file.filePath,
           functionName: fn.name,

@@ -42,14 +42,16 @@ const Navbar = ({ onMenuToggle, isSidebarOpen }) => {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-3 group">
-            <div className="w-9 h-9 bg-gradient-to-br from-primary to-secondary rounded-lg flex items-center justify-center group-hover:shadow-glow transition-shadow">
+            <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 via-indigo-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/25 group-hover:scale-105 transition-all">
               <Code2 className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xl font-bold text-gradient hidden sm:block">ReadMyCode</span>
+            <span className="text-xl font-extrabold bg-gradient-to-r from-white via-slate-100 to-indigo-200 bg-clip-text text-transparent tracking-tight hidden sm:block">
+              ReadMyCode
+            </span>
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center gap-1">
+          <div className="hidden md:flex items-center gap-1.5 bg-slate-900/60 p-1.5 rounded-xl border border-white/5">
             {navLinks.map((link) => {
               if (link.auth && !isAuthenticated) return null;
               const isActive = location.pathname === link.path;
@@ -58,10 +60,10 @@ const Navbar = ({ onMenuToggle, isSidebarOpen }) => {
                   key={link.path}
                   to={link.path}
                   className={cn(
-                    'px-4 py-2 rounded-lg text-sm font-medium transition-all',
+                    'px-4 py-2 rounded-lg text-sm font-semibold transition-all',
                     isActive
-                      ? 'text-primary bg-primary/10'
-                      : 'text-text-secondary hover:text-text-primary hover:bg-white/5'
+                      ? 'text-white bg-gradient-to-r from-indigo-600 to-purple-600 shadow-md shadow-indigo-500/20'
+                      : 'text-text-secondary hover:text-white hover:bg-white/5'
                   )}
                 >
                   {link.label}

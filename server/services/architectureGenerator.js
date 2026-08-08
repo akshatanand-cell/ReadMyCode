@@ -8,7 +8,7 @@ const { extractMermaid } = require("./flowchartGenerator");
  */
 async function generateArchitecture({ repoName, tree }) {
   const prompt = architecturePrompt({ repoName, tree });
-  const raw = await callAI(prompt, { maxTokens: 1500 });
+  const raw = await callAI(prompt, { maxTokens: 1500, type: "architecture" });
   return extractMermaid(raw);
 }
 

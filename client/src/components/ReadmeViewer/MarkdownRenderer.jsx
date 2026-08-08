@@ -52,27 +52,27 @@ const MarkdownRenderer = ({ content, className }) => {
         remarkPlugins={[remarkGfm]}
         components={{
           h1: ({ children }) => (
-            <h1 className="text-3xl font-bold text-text-primary mt-8 mb-4 pb-2 border-b border-border">
+            <h1 className="text-3xl font-extrabold text-white mt-8 mb-4 pb-2 border-b border-white/10 tracking-tight">
               {children}
             </h1>
           ),
           h2: ({ children }) => (
-            <h2 className="text-2xl font-semibold text-text-primary mt-6 mb-3">
+            <h2 className="text-2xl font-bold text-white mt-6 mb-3 tracking-tight">
               {children}
             </h2>
           ),
           h3: ({ children }) => (
-            <h3 className="text-xl font-semibold text-text-primary mt-5 mb-2">
+            <h3 className="text-xl font-bold text-indigo-300 mt-5 mb-2">
               {children}
             </h3>
           ),
           h4: ({ children }) => (
-            <h4 className="text-lg font-medium text-text-primary mt-4 mb-2">
+            <h4 className="text-lg font-semibold text-text-primary mt-4 mb-2">
               {children}
             </h4>
           ),
           p: ({ children }) => (
-            <p className="text-text-secondary leading-relaxed mb-4">
+            <p className="text-slate-300 leading-relaxed mb-4 text-base font-sans">
               {children}
             </p>
           ),
@@ -81,27 +81,27 @@ const MarkdownRenderer = ({ content, className }) => {
               href={href}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-primary hover:text-secondary underline underline-offset-2 transition-colors"
+              className="text-indigo-400 hover:text-indigo-300 font-semibold underline underline-offset-4 transition-colors"
             >
               {children}
             </a>
           ),
           ul: ({ children }) => (
-            <ul className="list-disc list-inside text-text-secondary space-y-1 mb-4 ml-2">
+            <ul className="list-disc list-inside text-slate-300 space-y-1.5 mb-4 ml-2">
               {children}
             </ul>
           ),
           ol: ({ children }) => (
-            <ol className="list-decimal list-inside text-text-secondary space-y-1 mb-4 ml-2">
+            <ol className="list-decimal list-inside text-slate-300 space-y-1.5 mb-4 ml-2">
               {children}
             </ol>
           ),
           li: ({ children }) => (
-            <li className="leading-relaxed">{children}</li>
+            <li className="leading-relaxed text-slate-300">{children}</li>
           ),
           blockquote: ({ children }) => (
-            <blockquote className="border-l-4 border-primary/50 pl-4 py-1 my-4 bg-primary/5 rounded-r">
-              <p className="text-text-secondary italic m-0">{children}</p>
+            <blockquote className="border-l-4 border-indigo-500 pl-4 py-2 my-4 bg-indigo-500/10 rounded-r-xl">
+              <p className="text-slate-300 italic m-0">{children}</p>
             </blockquote>
           ),
           code: ({ inline, className, children }) => {
@@ -114,7 +114,7 @@ const MarkdownRenderer = ({ content, className }) => {
             }
 
             return (
-              <code className="px-1.5 py-0.5 bg-background-secondary rounded text-sm font-mono text-secondary">
+              <code className="px-2 py-0.5 bg-slate-900 border border-white/10 rounded-md text-xs font-mono text-indigo-300 font-semibold">
                 {children}
               </code>
             );

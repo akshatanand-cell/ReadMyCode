@@ -7,7 +7,7 @@ const { readmePrompt } = require("../utils/promptTemplates");
  */
 async function generateReadme({ repoName, tree, keyFiles }) {
   const prompt = readmePrompt({ repoName, tree, keyFiles });
-  const markdown = await callAI(prompt, { maxTokens: 3000 });
+  const markdown = await callAI(prompt, { maxTokens: 3000, type: "readme" });
   return markdown.trim();
 }
 

@@ -17,8 +17,8 @@ const Button = React.forwardRef(({
     primary: 'btn-primary',
     secondary: 'btn-secondary',
     ghost: 'btn-ghost',
-    danger: 'inline-flex items-center justify-center gap-2 px-6 py-3 bg-error hover:bg-error-hover text-white font-medium rounded-lg transition-all duration-200 active:scale-95 disabled:opacity-50',
-    success: 'inline-flex items-center justify-center gap-2 px-6 py-3 bg-success hover:bg-success-hover text-white font-medium rounded-lg transition-all duration-200 active:scale-95 disabled:opacity-50',
+    danger: 'inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-semibold rounded-xl shadow-lg shadow-rose-500/25 transition-all duration-200 active:scale-95 disabled:opacity-50 border border-white/10',
+    success: 'inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold rounded-xl shadow-lg shadow-emerald-500/25 transition-all duration-200 active:scale-95 disabled:opacity-50 border border-white/10',
   };
 
   const sizes = {

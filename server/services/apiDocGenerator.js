@@ -11,7 +11,7 @@ async function generateApiDocs({ repoName, files }) {
     .join("\n\n");
 
   const prompt = apiDocPrompt({ repoName, routeFiles });
-  const result = await callAIJson(prompt, { maxTokens: 3000 });
+  const result = await callAIJson(prompt, { maxTokens: 3000, type: "apiDocs" });
   return result;
 }
 
