@@ -15,7 +15,10 @@ const dashboardRoutes = require("./routes/dashboardRoutes");
 const app = express();
 
 const allowedOrigins = [CLIENT_URL, "http://localhost:5173", "http://localhost:3000"].filter(Boolean);
-app.use(cors({ origin: allowedOrigins, credentials: true }));
+app.use(cors({
+  origin: (origin, callback) => callback(null, true),
+  credentials: true
+}));
 app.use(express.json({ limit: "5mb" }));
 app.use(express.urlencoded({ extended: true }));
 if (NODE_ENV !== "test") app.use(morgan("dev"));
