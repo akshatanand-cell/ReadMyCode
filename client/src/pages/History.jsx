@@ -49,15 +49,9 @@ const History = () => {
       try {
         const response = await repoAPI.getAll();
         const list = response.data?.repos || response.data || [];
-        setRepos(list);
-      } catch (error) {
-        setRepos([
-          { _id: '1', name: 'facebook/react', language: 'TypeScript', status: 'completed', updatedAt: '2024-01-15T10:30:00Z', files: 1240, githubUrl: 'https://github.com/facebook/react' },
-          { _id: '2', name: 'vercel/next.js', language: 'TypeScript', status: 'completed', updatedAt: '2024-01-14T16:45:00Z', files: 890, githubUrl: 'https://github.com/vercel/next.js' },
-          { _id: '3', name: 'microsoft/vscode', language: 'TypeScript', status: 'processing', updatedAt: '2024-01-16T08:20:00Z', files: 5600, githubUrl: 'https://github.com/microsoft/vscode' },
-          { _id: '4', name: 'torvalds/linux', language: 'C', status: 'completed', updatedAt: '2024-01-10T12:00:00Z', files: 45000, githubUrl: 'https://github.com/torvalds/linux' },
-          { _id: '5', name: 'golang/go', language: 'Go', status: 'failed', updatedAt: '2024-01-08T09:15:00Z', files: 3200, githubUrl: 'https://github.com/golang/go' },
-        ]);
+        setRepos(Array.isArray(list) ? list : []);
+      } catch (_error) {
+        setRepos([]);
       } finally {
         setLoading(false);
       }
@@ -90,8 +84,13 @@ const History = () => {
   });
 
   const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    if (!dateString) return 'Recent';
+    try {
+      const date = new Date(dateString);
+      return isNaN(date.getTime()) ? 'Recent' : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    } catch {
+      return 'Recent';
+    }
   };
 
   return (
@@ -170,7 +169,7 @@ const History = () => {
                       </span>
                       <span className="flex items-center gap-1">
                         <Folder className="w-3 h-3" />
-                        {repo.files?.toLocaleString() || repo.fileTree?.length || 0} files
+                        {repo.fileCount || repo.files || (repo.fileTree ? repo.fileTree.length : 0)} files
                       </span>
                       <span className="flex items-center gap-1">
                         <Calendar className="w-3 h-3" />

@@ -36,8 +36,14 @@ const DashboardLayout = () => {
   const { currentRepo, isAnalyzing, analysisProgress } = useRepo();
   const navigate = useNavigate();
   const [isStarred, setIsStarred] = useState(false);
-  const [starCount, setStarCount] = useState(128);
+  const [starCount, setStarCount] = useState(() => currentRepo?.stars || currentRepo?.stargazers_count || 0);
   const [isCopied, setIsCopied] = useState(false);
+
+  React.useEffect(() => {
+    if (currentRepo) {
+      setStarCount(currentRepo.stars || currentRepo.stargazers_count || 0);
+    }
+  }, [currentRepo]);
 
   const currentTab = location.pathname.split('/').pop();
   const isRepoPage = id && location.pathname.includes('/repo/');
@@ -51,7 +57,7 @@ const DashboardLayout = () => {
 
   const handleStarToggle = () => {
     setIsStarred((prev) => !prev);
-    setStarCount((prev) => (isStarred ? prev - 1 : prev + 1));
+    setStarCount((prev) => (isStarred ? Math.max(0, prev - 1) : prev + 1));
   };
 
   return (

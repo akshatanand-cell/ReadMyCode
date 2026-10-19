@@ -8,10 +8,8 @@ import {
   Network,
   FunctionSquare,
   Bug,
-  TrendingUp,
   Clock,
   Folder,
-  Star,
   ArrowRight,
   Plus,
   Activity,
@@ -24,18 +22,12 @@ import { SkeletonCard } from '@/components/common/Skeleton';
 import EmptyState from '@/components/common/EmptyState'; 
 import { cn } from '@/utils/helpers';
 
-const StatCard = ({ icon: Icon, label, value, trend, color }) => (
+const StatCard = ({ icon: Icon, label, value, color }) => (
   <Card>
     <div className="flex items-start justify-between">
       <div>
         <p className="text-sm text-text-secondary mb-1">{label}</p>
         <p className="text-2xl font-bold text-text-primary">{value}</p>
-        {trend && (
-          <div className="flex items-center gap-1 mt-1">
-            <TrendingUp className="w-3 h-3 text-success" />
-            <span className="text-xs text-success">{trend}</span>
-          </div>
-        )}
       </div>
       <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center', color)}>
         <Icon className="w-5 h-5" />
@@ -63,23 +55,15 @@ const Dashboard = () => {
         setStats(statsRes.data);
         setRecentRepos(recentRes.data?.repos || []);
         setActivity(activityRes.data?.activity || []);
-      } catch (error) {
+      } catch (_error) {
         setStats({
-          totalRepos: 12,
-          totalAnalyses: 48,
-          totalFunctions: 1240,
-          avgTime: '1m 45s',
+          totalRepos: 0,
+          readyRepos: 0,
+          failedRepos: 0,
+          totalAnalyses: 0,
         });
-        setRecentRepos([
-          { _id: '1', name: 'my-project/backend', language: 'Node.js', status: 'completed', updatedAt: '2 hours ago', files: 45 },
-          { _id: '2', name: 'my-project/frontend', language: 'React', status: 'completed', updatedAt: '5 hours ago', files: 32 },
-          { _id: '3', name: 'my-project/api', language: 'Python', status: 'processing', updatedAt: 'Just now', files: 28 },
-        ]);
-        setActivity([
-          { action: 'Generated README', repo: 'my-project/backend', time: '2 hours ago' },
-          { action: 'Analyzed functions', repo: 'my-project/frontend', time: '5 hours ago' },
-          { action: 'Created architecture diagram', repo: 'my-project/backend', time: '1 day ago' },
-        ]);
+        setRecentRepos([]);
+        setActivity([]);
       } finally {
         setLoading(false);
       }
@@ -120,10 +104,10 @@ const Dashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard icon={Folder} label="Repositories" value={stats?.totalRepos || 0} trend="+3 this week" color="bg-primary/10 text-primary" />
-        <StatCard icon={Activity} label="Analyses" value={stats?.totalAnalyses || 0} trend="+12 this week" color="bg-secondary/10 text-secondary" />
-        <StatCard icon={FunctionSquare} label="Functions" value={stats?.totalFunctions || 0} trend="+340 this week" color="bg-accent/10 text-accent" />
-        <StatCard icon={Clock} label="Avg. Analysis" value={stats?.avgTime || '0s'} color="bg-warning/10 text-warning" />
+        <StatCard icon={Folder} label="Total Repositories" value={stats?.totalRepos || 0} color="bg-primary/10 text-primary" />
+        <StatCard icon={Activity} label="Ready Repos" value={stats?.readyRepos || 0} color="bg-secondary/10 text-secondary" />
+        <StatCard icon={FunctionSquare} label="Total Analyses" value={stats?.totalAnalyses || 0} color="bg-accent/10 text-accent" />
+        <StatCard icon={Clock} label="Failed / Issues" value={stats?.failedRepos || 0} color="bg-warning/10 text-warning" />
       </div>
 
       <div>
@@ -145,7 +129,7 @@ const Dashboard = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {recentRepos.map((repo, i) => (
               <motion.div
-                key={repo._id}
+                key={repo._id || repo.id || i}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.1 }}
@@ -158,22 +142,22 @@ const Dashboard = () => {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="font-medium text-text-primary truncate">{repo.repoName || repo.name}</h3>
-                        <Badge variant={repo.status === 'completed' ? 'success' : 'warning'} size="sm">
-                          {repo.status}
+                        <Badge variant={repo.status === 'completed' || repo.status === 'ready' ? 'success' : 'warning'} size="sm">
+                          {repo.status || 'ready'}
                         </Badge>
                       </div>
                       <div className="flex items-center gap-3 text-xs text-text-muted">
                         <span className="flex items-center gap-1">
                           <Code2 className="w-3 h-3" />
-                          {repo.language}
+                          {repo.language || 'Codebase'}
                         </span>
                         <span className="flex items-center gap-1">
                           <Folder className="w-3 h-3" />
-                          {repo.files} files
+                          {repo.fileCount || repo.files || (repo.fileTree ? repo.fileTree.length : 0)} files
                         </span>
                         <span className="flex items-center gap-1">
                           <Clock className="w-3 h-3" />
-                          {repo.updatedAt}
+                          {repo.updatedAt ? new Date(repo.updatedAt).toLocaleDateString() : 'Recent'}
                         </span>
                       </div>
                     </div>

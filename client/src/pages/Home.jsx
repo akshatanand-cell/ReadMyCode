@@ -64,11 +64,11 @@ const features = [
   },
 ];
 
-const stats = [
-  { value: '10K+', label: 'Repositories Analyzed' },
-  { value: '50K+', label: 'Functions Documented' },
-  { value: '99.9%', label: 'Analysis Accuracy' },
-  { value: '< 2min', label: 'Avg. Processing Time' },
+const technicalHighlights = [
+  { value: 'AST Parsing', label: 'Syntax Tree & Scope Analysis' },
+  { value: 'Mermaid.js', label: 'Interactive Flow & Architecture' },
+  { value: 'REST & Schema', label: 'Automated Route Documentation' },
+  { value: '1-Click GitHub', label: 'Direct ZIP & Repo Sync' },
 ];
 
 const steps = [
@@ -89,24 +89,21 @@ const steps = [
   },
 ];
 
-const testimonials = [
+const supportedStacks = [
   {
-    name: 'Sarah Chen',
-    role: 'Senior Developer',
-    company: 'TechCorp',
-    content: 'ReadMyCode saved us weeks of documentation work. The architecture diagrams alone are worth it.',
+    category: 'JavaScript & TypeScript',
+    description: 'Node.js, Express, React, Next.js, Vue, NestJS, and modern frontend/backend tooling.',
+    tags: ['React', 'Next.js', 'Express', 'TypeScript', 'Node.js']
   },
   {
-    name: 'James Wilson',
-    role: 'Tech Lead',
-    company: 'StartupXYZ',
-    content: 'The function explanations helped our new team members onboard 3x faster. Incredible tool.',
+    category: 'Python Ecosystem',
+    description: 'FastAPI, Django, Flask, script utilities, data processing pipelines, and AI services.',
+    tags: ['FastAPI', 'Django', 'Flask', 'Python 3', 'Pydantic']
   },
   {
-    name: 'Maria Garcia',
-    role: 'Open Source Maintainer',
-    company: 'GitHub',
-    content: 'I use this for every new repository. The README generation is spot-on every time.',
+    category: 'Systems & Backend Stacks',
+    description: 'Go microservices, Rust packages, Java Spring applications, and multi-service repositories.',
+    tags: ['Go', 'Rust', 'Java', 'Docker', 'REST APIs']
   },
 ];
 
@@ -164,12 +161,12 @@ const Home = () => {
               </Button>
             </div>
 
-            {/* Stats */}
+            {/* Technical Highlights */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pt-12 border-t border-border/50">
-              {stats.map((stat, idx) => (
+              {technicalHighlights.map((item, idx) => (
                 <div key={idx} className="p-4 rounded-xl bg-card/40 border border-border/40">
-                  <div className="text-3xl font-extrabold text-gradient mb-1">{stat.value}</div>
-                  <div className="text-xs text-text-secondary font-medium">{stat.label}</div>
+                  <div className="text-xl sm:text-2xl font-extrabold text-primary mb-1 tracking-tight">{item.value}</div>
+                  <div className="text-xs text-text-secondary font-medium">{item.label}</div>
                 </div>
               ))}
             </div>
@@ -230,21 +227,27 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Testimonials */}
+      {/* Supported Tech Stacks */}
       <section className="py-24 bg-background-secondary/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold text-text-primary mb-4">Loved by Engineers</h2>
-            <p className="text-text-secondary text-lg">Here is what developers are saying about ReadMyCode.</p>
+            <h2 className="text-3xl sm:text-4xl font-bold text-text-primary mb-4">Built for Modern Tech Stacks</h2>
+            <p className="text-text-secondary text-lg">Intelligent AST parsing and AI analysis tailored to your framework and runtime.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {testimonials.map((item, idx) => (
-              <div key={idx} className="p-6 rounded-2xl bg-card border border-border flex flex-col justify-between">
-                <p className="text-text-secondary text-sm italic mb-6">"{item.content}"</p>
+            {supportedStacks.map((stack, idx) => (
+              <div key={idx} className="p-6 rounded-2xl bg-card border border-border flex flex-col justify-between hover:border-primary/40 transition-colors">
                 <div>
-                  <div className="font-bold text-text-primary">{item.name}</div>
-                  <div className="text-xs text-text-muted">{item.role} · {item.company}</div>
+                  <h3 className="text-lg font-bold text-text-primary mb-2">{stack.category}</h3>
+                  <p className="text-text-secondary text-sm leading-relaxed mb-6">{stack.description}</p>
+                </div>
+                <div className="flex flex-wrap gap-2 pt-2 border-t border-border/50">
+                  {stack.tags.map((tag) => (
+                    <span key={tag} className="px-2.5 py-1 rounded-md text-xs font-mono bg-background-secondary text-text-primary border border-border">
+                      {tag}
+                    </span>
+                  ))}
                 </div>
               </div>
             ))}
@@ -258,7 +261,7 @@ const Home = () => {
           <div className="p-12 rounded-3xl bg-gradient-to-r from-primary/20 via-secondary/20 to-accent/20 border border-primary/30 backdrop-blur-xl">
             <h2 className="text-3xl sm:text-4xl font-bold text-text-primary mb-4">Ready to Document Your Project?</h2>
             <p className="text-text-secondary max-w-xl mx-auto mb-8">
-              Join thousands of developers using AI to simplify code comprehension and onboarding.
+              Analyze your code structure, generate deep documentation, and visualize architectures with zero configuration.
             </p>
             <Button
               size="lg"

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useRepoAnalysis } from '@/hooks/useRepoAnalysis';
 import { useAuth } from '@/context/AuthContext';
+import { dashboardAPI } from '@/services/api';
 import Button from '@/components/common/Button';
 import Card from '@/components/common/Card';
 import ProgressBar from '@/components/common/ProgressBar';
@@ -98,11 +99,24 @@ const Analyze = () => {
     if (repoId) navigate(`/repo/${repoId}`);
   };
 
-  const recentRepos = [
-    { name: 'facebook/react', language: 'TypeScript', stars: '220k', status: 'completed' },
-    { name: 'vercel/next.js', language: 'TypeScript', stars: '120k', status: 'completed' },
-    { name: 'microsoft/vscode', language: 'TypeScript', stars: '160k', status: 'processing' },
-  ];
+  const [recentRepos, setRecentRepos] = useState([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    dashboardAPI.getRecent(3)
+      .then((res) => {
+        if (isMounted) {
+          const list = res.data?.repos || [];
+          setRecentRepos(Array.isArray(list) ? list : []);
+        }
+      })
+      .catch(() => {
+        if (isMounted) setRecentRepos([]);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   return (
     <div className="min-h-[calc(100vh-64px)] bg-background">
@@ -349,37 +363,41 @@ const Analyze = () => {
           </AnimatePresence>
         </Card>
 
-        <div className="mb-6">
-          <h2 className="text-lg font-semibold text-text-primary mb-4">Recent Analyses</h2>
-          <div className="space-y-3">
-            {recentRepos.map((repo, i) => (
-              <motion.div
-                key={repo.name}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.1 }}
-              >
-                <Card hover className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-background-secondary rounded-lg flex items-center justify-center flex-shrink-0">
-                    <Code2 className="w-5 h-5 text-primary" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-medium text-text-primary">{repo.name}</h3>
-                      <Badge variant={repo.status === 'completed' ? 'success' : 'warning'} size="sm">
-                        {repo.status}
-                      </Badge>
+        {recentRepos.length > 0 && (
+          <div className="mb-6">
+            <h2 className="text-lg font-semibold text-text-primary mb-4">Your Recent Analyses</h2>
+            <div className="space-y-3">
+              {recentRepos.map((repo, i) => (
+                <motion.div
+                  key={repo._id || repo.id || i}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.1 }}
+                >
+                  <Card hover className="flex items-center gap-4 cursor-pointer" onClick={() => navigate(`/repo/${repo._id || repo.id}`)}>
+                    <div className="w-10 h-10 bg-background-secondary rounded-lg flex items-center justify-center flex-shrink-0">
+                      <Code2 className="w-5 h-5 text-primary" />
                     </div>
-                    <p className="text-xs text-text-muted">{repo.language} · {repo.stars} stars</p>
-                  </div>
-                  <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')}>
-                    View
-                  </Button>
-                </Card>
-              </motion.div>
-            ))}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-sm font-medium text-text-primary truncate">{repo.repoName || repo.name}</h3>
+                        <Badge variant={repo.status === 'completed' || repo.status === 'ready' ? 'success' : 'warning'} size="sm">
+                          {repo.status || 'ready'}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-text-muted mt-0.5">
+                        {repo.language || 'Codebase'} · {repo.fileCount || repo.files || 0} files · {repo.updatedAt ? new Date(repo.updatedAt).toLocaleDateString() : 'Recent'}
+                      </p>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); navigate(`/repo/${repo._id || repo.id}`); }}>
+                      View
+                    </Button>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

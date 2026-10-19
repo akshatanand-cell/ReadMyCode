@@ -68,7 +68,7 @@ const RepoOverview = () => {
   };
 
   const openPushModal = () => {
-    setPushRepoName(currentRepo?.name || currentRepo?.repoName || 'my-project');
+    setPushRepoName(currentRepo?.name || currentRepo?.repoName || 'repository');
     setIsPushModalOpen(true);
   };
 
@@ -289,8 +289,10 @@ const RepoOverview = () => {
                 <Clock className="w-6 h-6 text-emerald-500" />
               </div>
               <div>
-                <p className="text-2xl font-extrabold text-text-primary tracking-tight">{currentRepo.analysisDuration || '1.2s'}</p>
-                <p className="text-xs font-medium text-text-secondary uppercase tracking-wider">Analysis Speed</p>
+                <p className="text-2xl font-extrabold text-text-primary tracking-tight">
+                  {currentRepo.analysisDuration || (currentRepo.status === 'completed' || currentRepo.status === 'ready' ? 'Done' : 'Active')}
+                </p>
+                <p className="text-xs font-medium text-text-secondary uppercase tracking-wider">Analysis Status</p>
               </div>
             </div>
           </Card>
