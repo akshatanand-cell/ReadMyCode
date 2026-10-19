@@ -47,6 +47,7 @@ const History = () => {
   useEffect(() => {
     const fetchRepos = async () => {
       try {
+        const response = await repoAPI.getAll();
         const list = response.data?.repos || response.data || [];
         setRepos(list);
       } catch (error) {

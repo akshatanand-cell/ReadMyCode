@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 
 const repoSchema = new mongoose.Schema(
   {
-    owner: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    owner: { type: mongoose.Schema.Types.Mixed, required: true },
     repoUrl: { type: String, required: true },
     repoName: { type: String, required: true },
     defaultBranch: { type: String, default: "main" },

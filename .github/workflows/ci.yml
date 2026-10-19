@@ -25,12 +25,12 @@ jobs:
       # Install server dependencies
       - name: Install server dependencies
         working-directory: ./server
-        run: npm install --production
+        run: npm install
 
       # Lint server
       - name: Lint server
         working-directory: ./server
-        run: npx eslint . --max-warnings=50 --ignore-pattern node_modules || true
+        run: npm run lint || true
 
       # Install client dependencies
       - name: Install client dependencies
@@ -40,7 +40,7 @@ jobs:
       # Lint client
       - name: Lint client
         working-directory: ./client
-        run: npx eslint src/ --max-warnings=50 || true
+        run: npm run lint || true
 
       # Build client
       - name: Build client

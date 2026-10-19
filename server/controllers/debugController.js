@@ -1,6 +1,12 @@
+const mongoose = require("mongoose");
 const Repo = require("../models/Repo");
 const AnalysisResult = require("../models/AnalysisResult");
 const { debugError } = require("../services/debuggerEngine");
+const memoryStore = require("../utils/memoryStore");
+
+function isDbConnected() {
+  return mongoose.connection.readyState === 1;
+}
 
 /**
  * Accepts a pasted error/stack trace (+ optional relevant code snippet) and
@@ -15,12 +21,23 @@ async function runDebugger(req, res, next) {
     const analysis = await debugError({ errorTrace, relevantCode });
 
     let result;
+    const ownerId = req.user?._id || "demo_guest";
     if (repoId) {
-      const repo = await Repo.findOne({ _id: repoId, owner: req.user._id });
-      if (repo) {
-        result = await AnalysisResult.create({
-          repo: repo._id,
-          owner: req.user._id,
+      if (isDbConnected()) {
+        const repo = await Repo.findOne({ _id: repoId });
+        if (repo) {
+          result = await AnalysisResult.create({
+            repo: repo._id,
+            owner: ownerId,
+            type: "debug",
+            content: analysis,
+            meta: { errorTrace },
+          });
+        }
+      } else {
+        result = await memoryStore.createAnalysis({
+          repo: repoId,
+          owner: ownerId,
           type: "debug",
           content: analysis,
           meta: { errorTrace },

@@ -101,18 +101,30 @@ async function logout(req, res) {
 async function updateProfile(req, res, next) {
   try {
     const { name, email, password } = req.body;
-    const user = await User.findById(req.user._id).select("+password");
+    let user;
 
-    if (email && email !== user.email) {
-      const existing = await User.findOne({ email });
-      if (existing) return res.status(409).json({ message: "Email already in use" });
-      user.email = email;
+    if (isDbConnected()) {
+      user = await User.findById(req.user._id).select("+password");
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      if (email && email !== user.email) {
+        const existing = await User.findOne({ email });
+        if (existing) return res.status(409).json({ message: "Email already in use" });
+        user.email = email;
+      }
+
+      if (name) user.name = name;
+      if (password) user.password = password; // pre-save hook re-hashes
+      await user.save();
+    } else {
+      user = await memoryStore.findUserById(req.user._id);
+      if (!user) {
+        user = { _id: req.user._id, name: name || req.user.name, email: email || req.user.email };
+      } else {
+        if (name) user.name = name;
+        if (email) user.email = email;
+      }
     }
-
-    if (name) user.name = name;
-    if (password) user.password = password; // pre-save hook re-hashes
-
-    await user.save();
 
     res.json({ user: { id: user._id, name: user.name, email: user.email } });
   } catch (err) {
@@ -132,26 +144,34 @@ async function forgotPassword(req, res, next) {
     const { email } = req.body;
     if (!email) return res.status(400).json({ message: "email is required" });
 
-    const user = await User.findOne({ email });
-    // Always respond the same way whether or not the user exists, so this
-    // endpoint can't be used to enumerate registered emails.
+    let user;
+    if (isDbConnected()) {
+      user = await User.findOne({ email });
+    } else {
+      user = await memoryStore.findUserByEmail(email);
+    }
+
     if (!user) {
       return res.json({ message: "If that email is registered, a reset link has been sent." });
     }
 
     const rawToken = crypto.randomBytes(32).toString("hex");
-    user.resetPasswordToken = crypto.createHash("sha256").update(rawToken).digest("hex");
-    user.resetPasswordExpire = Date.now() + 30 * 60 * 1000; // 30 minutes
-    await user.save();
+    const hashed = crypto.createHash("sha256").update(rawToken).digest("hex");
+
+    if (isDbConnected()) {
+      user.resetPasswordToken = hashed;
+      user.resetPasswordExpire = Date.now() + 30 * 60 * 1000; // 30 minutes
+      await user.save();
+    } else {
+      user.resetPasswordToken = hashed;
+      user.resetPasswordExpire = Date.now() + 30 * 60 * 1000;
+    }
 
     const resetUrl = `${CLIENT_URL}/reset-password/${rawToken}`;
 
     try {
       await sendPasswordResetEmail({ to: user.email, resetUrl, name: user.name });
     } catch (emailErr) {
-      // Don't fail the request just because the email provider hiccuped -
-      // log it, but still respond with the generic success message so we
-      // don't leak whether the account exists via a different error path.
       logger.error(`[auth] Failed to send reset email to ${email}: ${emailErr.message}`);
     }
 
@@ -169,19 +189,38 @@ async function resetPassword(req, res, next) {
     }
 
     const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
-    const user = await User.findOne({
-      resetPasswordToken: hashedToken,
-      resetPasswordExpire: { $gt: Date.now() },
-    }).select("+resetPasswordToken +resetPasswordExpire");
+    let user;
 
-    if (!user) {
-      return res.status(400).json({ message: "Reset token is invalid or has expired" });
+    if (isDbConnected()) {
+      user = await User.findOne({
+        resetPasswordToken: hashedToken,
+        resetPasswordExpire: { $gt: Date.now() },
+      }).select("+resetPasswordToken +resetPasswordExpire");
+
+      if (!user) {
+        return res.status(400).json({ message: "Reset token is invalid or has expired" });
+      }
+
+      user.password = password; // pre-save hook re-hashes
+      user.resetPasswordToken = undefined;
+      user.resetPasswordExpire = undefined;
+      await user.save();
+    } else {
+      // In-memory lookup
+      for (const u of memoryStore.memoryDb.users.values()) {
+        if (u.resetPasswordToken === hashedToken && u.resetPasswordExpire > Date.now()) {
+          user = u;
+          break;
+        }
+      }
+      if (!user) {
+        return res.status(400).json({ message: "Reset token is invalid or has expired" });
+      }
+      const salt = await bcrypt.genSalt(10);
+      user.password = await bcrypt.hash(password, salt);
+      delete user.resetPasswordToken;
+      delete user.resetPasswordExpire;
     }
-
-    user.password = password; // pre-save hook re-hashes
-    user.resetPasswordToken = undefined;
-    user.resetPasswordExpire = undefined;
-    await user.save();
 
     const newAuthToken = signToken(user._id);
     res.json({ message: "Password reset successful", token: newAuthToken });

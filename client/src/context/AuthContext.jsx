@@ -5,32 +5,51 @@ import toast from 'react-hot-toast';
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => {
+    try {
+      const savedUser = localStorage.getItem('user');
+      return savedUser ? JSON.parse(savedUser) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return Boolean(localStorage.getItem('token'));
+  });
   const [isLoading, setIsLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const checkAuth = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       if (!token) {
+        setUser(null);
+        setIsAuthenticated(false);
         setIsLoading(false);
         return;
       }
       if (token.startsWith('demo_token_')) {
-        setUser({ id: 'demo_user', name: 'Developer', email: 'developer@example.com' });
+        const demoUser = { id: 'demo_user', name: 'Developer', email: 'developer@example.com' };
+        setUser(demoUser);
+        localStorage.setItem('user', JSON.stringify(demoUser));
         setIsAuthenticated(true);
         setIsLoading(false);
         return;
       }
       const response = await authAPI.getProfile();
-      setUser(response.data?.user || response.data);
+      const userData = response.data?.user || response.data;
+      setUser(userData);
+      localStorage.setItem('user', JSON.stringify(userData));
       setIsAuthenticated(true);
     } catch (error) {
       if (!error.response || error.code === 'ERR_NETWORK') {
-        setUser({ id: 'demo_user', name: 'Developer', email: 'developer@example.com' });
+        const offlineUser = user || { id: 'demo_user', name: 'Developer', email: 'developer@example.com' };
+        setUser(offlineUser);
         setIsAuthenticated(true);
       } else {
         localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setUser(null);
+        setIsAuthenticated(false);
       }
     } finally {
       setIsLoading(false);
@@ -46,6 +65,7 @@ export function AuthProvider({ children }) {
       const response = await authAPI.login(credentials);
       const { token, user } = response.data;
       localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
       setUser(user);
       setIsAuthenticated(true);
       toast.success('Welcome back!');
@@ -60,6 +80,7 @@ export function AuthProvider({ children }) {
         };
         const fallbackToken = 'demo_token_' + Date.now();
         localStorage.setItem('token', fallbackToken);
+        localStorage.setItem('user', JSON.stringify(fallbackUser));
         setUser(fallbackUser);
         setIsAuthenticated(true);
         return { success: true };
@@ -76,6 +97,7 @@ export function AuthProvider({ children }) {
       const response = await authAPI.register(data);
       const { token, user } = response.data;
       localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
       setUser(user);
       setIsAuthenticated(true);
       toast.success('Account created successfully!');
@@ -90,6 +112,7 @@ export function AuthProvider({ children }) {
         };
         const fallbackToken = 'demo_token_' + Date.now();
         localStorage.setItem('token', fallbackToken);
+        localStorage.setItem('user', JSON.stringify(fallbackUser));
         setUser(fallbackUser);
         setIsAuthenticated(true);
         return { success: true };
@@ -106,6 +129,7 @@ export function AuthProvider({ children }) {
       await authAPI.logout();
     } finally {
       localStorage.removeItem('token');
+      localStorage.removeItem('user');
       setUser(null);
       setIsAuthenticated(false);
       toast.success('Logged out successfully');
@@ -115,7 +139,9 @@ export function AuthProvider({ children }) {
   const updateProfile = async (data) => {
     try {
       const response = await authAPI.updateProfile(data);
-      setUser(response.data?.user || response.data);
+      const updatedUser = response.data?.user || response.data;
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      setUser(updatedUser);
       toast.success('Profile updated');
       return { success: true };
     } catch (error) {

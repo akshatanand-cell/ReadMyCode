@@ -184,7 +184,7 @@ const Dashboard = () => {
                       {features.slice(0, 3).map((f) => (
                         <button
                           key={f.path}
-                          onClick={(e) => { e.stopPropagation(); navigate(`/repo/${repo._id}/${f.path}`); }}
+                          onClick={(e) => { e.stopPropagation(); navigate(`/repo/${repo._id || repo.id}/${f.path}`); }}
                           className="flex items-center gap-2 px-3 py-2 rounded-lg bg-background-secondary hover:bg-white/5 transition-colors text-xs text-text-secondary hover:text-text-primary"
                         >
                           <f.icon className="w-3.5 h-3.5" />

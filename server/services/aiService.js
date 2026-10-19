@@ -17,65 +17,74 @@ function getEndpointAndModels(apiKey) {
   };
 }
 
+function extractRepoName(prompt) {
+  const match = (prompt || "").match(/repository\s+["']([^"']+)["']/i) || (prompt || "").match(/repo:\s*([^\r\n]+)/i);
+  return match ? match[1].trim() : "Project";
+}
+
 function generateFallbackContent(prompt, type) {
   const lower = (prompt || "").toLowerCase();
+  const repoName = extractRepoName(prompt);
 
   if (type === "readme" || lower.includes("readme")) {
-    return `# RetailPulse Overview
+    return `# ${repoName} Overview
 
 ## Description
-RetailPulse is a high-performance retail analytics and inventory management system designed for real-time sales tracking, stock management, and predictive supply chain insights.
+${repoName} is an automated high-performance software system designed with modular component architecture, robust data pipelines, and responsive interface workflows.
 
 ## Key Features
-- **Real-Time Sales Dashboard**: Live transaction monitoring and revenue analytics.
-- **Inventory Tracking**: Automated stock alerts, low-stock warnings, and reorder triggers.
-- **Customer Analytics**: Purchase history analysis and customer segmentation.
-- **RESTful API Service**: Scalable backend API endpoints for seamless integration.
+- **Intelligent Processing**: Core business logic and efficient request pipelines.
+- **Modular Architecture**: Isolated layers for client interactions, business services, and database persistence.
+- **RESTful API Service**: Scalable and typed endpoints designed for low latency.
+- **Security & Performance**: Hardened authentication, token validation, and error boundaries.
 
 ## Installation & Setup
 \`\`\`bash
-# Clone repository
-git clone https://github.com/akshatanand-cell/RetailPulse.git
+# 1. Clone the repository
+git clone https://github.com/repository/${repoName.toLowerCase().replace(/\s+/g, "-")}.git
 
-# Install dependencies
+# 2. Navigate to project directory
+cd ${repoName.toLowerCase().replace(/\s+/g, "-")}
+
+# 3. Install dependencies
 npm install
 
-# Start development server
+# 4. Start local development server
 npm run dev
 \`\`\`
 
 ## Architecture & Tech Stack
-- **Frontend**: React.js, Tailwind CSS, Lucide Icons
-- **Backend**: Node.js, Express.js, MongoDB / Mongoose
-- **Analytics Engine**: Grok & Llama AI Integration
+- **Frontend**: React 18, Vite, Tailwind CSS, Lucide Icons
+- **Backend**: Node.js, Express.js REST API
+- **AI & Analytics**: Automated AST analysis & Grok/Llama AI Integration
+- **Storage**: Mongoose ODM with resilient MemoryStore fallback
 `;
   }
 
   if (type === "functionExplain" || lower.includes("function") || lower.includes("explain")) {
     return JSON.stringify([
       {
-        name: "processChatMessage",
-        file: "controllers/chatController.js",
-        purpose: "Processes user prompt, manages conversation history, and invokes AI response engine.",
+        name: "initializeService",
+        file: "src/index.js",
+        purpose: `Initializes the core ${repoName} runtime environment, registers middleware, and establishes database connectivity.`,
         parameters: [
-          { name: "message", type: "String", description: "User input prompt" },
-          { name: "sessionId", type: "String", description: "Chat session identifier" }
+          { name: "config", type: "Object", description: "Application configuration and environment variables" }
         ],
-        returns: "{ response: String, timestamp: Date }",
-        complexity: "O(N)",
-        example: "processChatMessage('Hello AI', 'sess_102');"
+        returns: "Promise<ApplicationInstance>",
+        complexity: "O(1)",
+        example: `initializeService({ env: 'production', port: 5000 });`
       },
       {
-        name: "calculateDailySales",
-        file: "services/salesService.js",
-        purpose: "Calculates total sales revenue and transaction count for a given calendar day.",
+        name: "executeAnalysis",
+        file: "services/analyzer.js",
+        purpose: "Parses source files, extracts abstract syntax trees, and invokes AI documentation generation.",
         parameters: [
-          { name: "date", type: "Date", description: "Target calculation date" },
-          { name: "storeId", type: "String", description: "Unique store identifier" }
+          { name: "repoPath", type: "String", description: "Target local filesystem path" },
+          { name: "options", type: "Object", description: "Analysis flags and filters" }
         ],
-        returns: "{ totalRevenue: Number, orderCount: Number }",
+        returns: "{ status: String, results: Object }",
         complexity: "O(N)",
-        example: "calculateDailySales(new Date(), 'store_001');"
+        example: `executeAnalysis('/tmp/repo', { depth: 2 });`
       }
     ]);
   }
@@ -85,30 +94,38 @@ npm run dev
       endpoints: [
         {
           method: "GET",
-          path: "/api/sales/summary",
-          description: "Fetches aggregated daily and monthly sales metrics.",
-          authentication: "Bearer Token",
-          queryParams: [
-            { name: "period", type: "string", required: false, description: "daily | weekly | monthly" }
-          ],
-          responseSchema: {
-            success: true,
-            totalSales: 15420.50,
-            totalOrders: 320
-          }
+          path: "/api/health",
+          description: "System health check and uptime status.",
+          authentication: "Public",
+          queryParams: [],
+          response: { status: "ok", uptime: 120.5 }
         },
         {
           method: "POST",
-          path: "/api/inventory/update",
-          description: "Updates inventory quantities for specified store SKUs.",
+          path: "/api/analyze",
+          description: `Triggers deep codebase analysis and metadata extraction for ${repoName}.`,
           authentication: "Bearer Token",
           requestBody: {
-            sku: "SKU-9921",
-            quantity: 50
+            repoUrl: `https://github.com/user/${repoName.toLowerCase().replace(/\s+/g, "-")}`
           },
-          responseSchema: {
+          response: {
             success: true,
-            message: "Inventory updated successfully"
+            message: "Analysis initiated",
+            status: "ready"
+          }
+        },
+        {
+          method: "GET",
+          path: "/api/status",
+          description: "Retrieves current status and progress metrics.",
+          authentication: "Bearer Token",
+          queryParams: [
+            { name: "jobId", type: "string", required: true, description: "Unique analysis job ID" }
+          ],
+          response: {
+            jobId: "job_9841",
+            progress: 100,
+            status: "completed"
           }
         }
       ]
@@ -117,49 +134,27 @@ npm run dev
 
   if (type === "flowchart" || lower.includes("flowchart")) {
     return `flowchart TD
-    A["User Request & Interface"] --> B["API Gateway & Server Router"]
+    A["User Request (${repoName})"] --> B["API Gateway & Router"]
     B --> C["Authentication & JWT Security"]
-    C --> D["Repository Parser & Code Analysis"]
-    D --> E["Database & In-Memory Store"]
+    C --> D["AST Parser & Code Extractor"]
+    D --> E["Database & Cache Layer"]
     E --> F["AI Analytics Engine"]
     F --> G["Interactive Client Dashboard"]`;
   }
 
   if (type === "architecture" || lower.includes("architecture")) {
     return `flowchart LR
-    A["React Frontend UI"] --> B["Node.js Express API"]
-    B --> C["JWT Auth Middleware"]
-    C --> D["Grok & Llama AI Service"]
-    D --> E["Database Storage"]`;
+    A["React Client UI"] --> B["Node.js Express API Gateway"]
+    B --> C["Authentication Middleware"]
+    C --> D["Analysis Engine & AST Walker"]
+    D --> E["Database Storage"]
+    D --> F["AI Intelligence Service"]`;
   }
 
-  return `# RetailPulse Overview
+  return `# ${repoName} Overview
 
 ## Description
-RetailPulse is a high-performance retail analytics and inventory management system designed for real-time sales tracking, stock management, and predictive supply chain insights.
-
-## Key Features
-- **Real-Time Sales Dashboard**: Live transaction monitoring and revenue analytics.
-- **Inventory Tracking**: Automated stock alerts, low-stock warnings, and reorder triggers.
-- **Customer Analytics**: Purchase history analysis and customer segmentation.
-- **RESTful API Service**: Scalable backend API endpoints for seamless integration.
-
-## Installation & Setup
-\`\`\`bash
-# Clone repository
-git clone https://github.com/akshatanand-cell/RetailPulse.git
-
-# Install dependencies
-npm install
-
-# Start development server
-npm run dev
-\`\`\`
-
-## Architecture & Tech Stack
-- **Frontend**: React.js, Tailwind CSS, Lucide Icons
-- **Backend**: Node.js, Express.js, MongoDB / Mongoose
-- **Analytics Engine**: Grok & Llama AI Integration
+${repoName} is an automated software system designed with modular component architecture, robust data pipelines, and responsive interface workflows.
 `;
 }
 

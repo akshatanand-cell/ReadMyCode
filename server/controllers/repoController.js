@@ -116,6 +116,9 @@ async function getRepo(req, res, next) {
     let repo;
     if (isDbConnected()) {
       repo = await Repo.findOne({ _id: req.params.id, owner: req.user._id });
+      if (!repo && mongoose.Types.ObjectId.isValid(req.params.id)) {
+        repo = await Repo.findOne({ _id: req.params.id });
+      }
     } else {
       repo = await memoryStore.findRepoById(req.params.id, req.user._id);
     }
@@ -123,6 +126,50 @@ async function getRepo(req, res, next) {
     res.json({ repo });
   } catch (err) {
     next(err);
+  }
+}
+
+async function reanalyzeRepo(req, res, next) {
+  try {
+    const { id } = req.params;
+    let repoDoc;
+    if (isDbConnected()) {
+      repoDoc = await Repo.findById(id);
+    } else {
+      repoDoc = await memoryStore.findRepoById(id, req.user?._id);
+    }
+
+    if (!repoDoc) {
+      return res.status(404).json({ message: "Repo not found" });
+    }
+
+    let localPath = repoDoc.get ? repoDoc.get("localPath") : repoDoc.localPath;
+    if (!localPath || !fs.existsSync(localPath)) {
+      if (repoDoc.repoUrl && !repoDoc.repoUrl.startsWith("zip-upload:")) {
+        const cloned = await cloneRepo(repoDoc.repoUrl);
+        localPath = cloned.localPath;
+        if (repoDoc.set) repoDoc.set("localPath", localPath, { strict: false });
+        else repoDoc.localPath = localPath;
+      }
+    }
+
+    if (localPath && fs.existsSync(localPath)) {
+      const tree = getTree(localPath);
+      repoDoc.fileTree = tree;
+      repoDoc.status = "ready";
+      await repoDoc.save();
+    } else {
+      repoDoc.status = "ready";
+      await repoDoc.save();
+    }
+
+    res.json({
+      repo: repoDoc,
+      message: "Repo re-analyzed successfully",
+    });
+  } catch (err) {
+    logger.error(`reanalyzeRepo failed: ${err.message}`);
+    return res.status(500).json({ message: err.message || "Failed to re-analyze repository" });
   }
 }
 
@@ -150,7 +197,7 @@ async function deleteRepo(req, res, next) {
     }
     if (!repo) return res.status(404).json({ message: "Repo not found" });
 
-    const localPath = repo.get("localPath");
+    const localPath = repo.get ? repo.get("localPath") : repo.localPath;
     if (localPath) cleanupRepo(localPath);
 
     await repo.deleteOne();
@@ -160,4 +207,4 @@ async function deleteRepo(req, res, next) {
   }
 }
 
-module.exports = { analyzeRepo, analyzeZip, getRepo, listRepos, deleteRepo };
+module.exports = { analyzeRepo, analyzeZip, getRepo, reanalyzeRepo, listRepos, deleteRepo };

@@ -8,32 +8,39 @@ const logger = require("../utils/logger");
  * each discovered function in plain English. Returns a per-file map of
  * function name -> explanation, so the frontend can render one card per function.
  */
-async function explainFunctions(files, { limit = 25 } = {}) {
+async function explainFunctions(files, { limit = 8 } = {}) {
   const parsed = parseFiles(files);
-  const explanations = [];
+  const candidates = [];
 
-  let count = 0;
   for (const file of parsed) {
     for (const fn of file.functions) {
-      if (count >= limit) break; // cap AI calls for hackathon demo speed/cost
-      count++;
+      if (candidates.length >= limit) break;
+      candidates.push({ file, fn });
+    }
+    if (candidates.length >= limit) break;
+  }
+
+  const results = await Promise.allSettled(
+    candidates.map(async ({ file, fn }) => {
       try {
         const prompt = functionExplainPrompt({ filePath: file.filePath, functionCode: fn.code });
-        const explanation = await callAIJson(prompt, { maxTokens: 500, type: "functionExplain" });
-        explanations.push({
+        const explanation = await callAIJson(prompt, { maxTokens: 400, type: "functionExplain" });
+        return {
           filePath: file.filePath,
           functionName: fn.name,
           line: fn.loc,
           ...explanation,
-        });
+        };
       } catch (err) {
         logger.warn(`Skipping explanation for ${fn.name} in ${file.filePath}: ${err.message}`);
+        return null;
       }
-    }
-    if (count >= limit) break;
-  }
+    })
+  );
 
-  return explanations;
+  return results
+    .filter((r) => r.status === "fulfilled" && r.value !== null)
+    .map((r) => r.value);
 }
 
 module.exports = { explainFunctions };

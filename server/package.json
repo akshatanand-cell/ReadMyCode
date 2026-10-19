@@ -6,7 +6,8 @@
   "type": "commonjs",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "lint": "eslint . --ignore-pattern node_modules --ignore-pattern temp_repos"
   },
   "dependencies": {
     "@babel/parser": "^7.25.0",
@@ -23,6 +24,7 @@
     "simple-git": "^3.25.0"
   },
   "devDependencies": {
+    "eslint": "^10.13.0",
     "nodemon": "^3.1.4"
   }
 }

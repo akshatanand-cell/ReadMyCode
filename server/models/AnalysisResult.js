@@ -2,8 +2,8 @@ const mongoose = require("mongoose");
 
 const analysisResultSchema = new mongoose.Schema(
   {
-    repo: { type: mongoose.Schema.Types.ObjectId, ref: "Repo", required: true },
-    owner: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    repo: { type: mongoose.Schema.Types.Mixed, required: true },
+    owner: { type: mongoose.Schema.Types.Mixed, required: true },
     type: {
       type: String,
       enum: ["readme", "apiDocs", "flowchart", "architecture", "functionExplain", "debug"],

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import Button from '../common/Button';
 import Spinner from '../common/Spinner';
-import { repoAPI } from '@/services/api';
+import { analysisAPI, repoAPI } from '@/services/api';
 
 export default function ApiDocsViewer({ repoId, content }) {
   const [docs, setDocs] = useState(content || null);
@@ -18,10 +18,12 @@ export default function ApiDocsViewer({ repoId, content }) {
   const fetchDocs = async () => {
     setLoading(true);
     try {
-      const res = await repoAPI.getApiDocs(repoId);
-      setDocs(res.data.docs);
-      if (res.data.docs?.endpoints?.length > 0) {
-        setSelectedEndpoint(res.data.docs.endpoints[0]);
+      const apiCall = analysisAPI?.getApiDocs || repoAPI?.getApiDocs;
+      const res = await apiCall(repoId);
+      const parsedDocs = res.data?.docs || res.data?.result?.content || res.data;
+      setDocs(parsedDocs);
+      if (parsedDocs?.endpoints?.length > 0) {
+        setSelectedEndpoint(parsedDocs.endpoints[0]);
       }
     } catch (err) {
       console.error('Failed to fetch API docs:', err);

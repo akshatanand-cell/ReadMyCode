@@ -124,7 +124,10 @@ export function RepoProvider({ children }) {
 
   const runDebugger = useCallback(async (repoId, errorData) => {
     try {
-      const response = await analysisAPI.getDebugger(repoId, errorData);
+      const payload = typeof errorData === 'object'
+        ? { repoId, ...errorData }
+        : { repoId, errorTrace: errorData };
+      const response = await analysisAPI.getDebugger(payload);
       return response.data;
     } catch (error) {
       toast.error('Debugger failed');

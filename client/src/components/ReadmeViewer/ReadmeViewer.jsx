@@ -6,32 +6,37 @@ import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import Button from '../common/Button';
 import api from '@/services/api';
 
+import Spinner from '../common/Spinner';
+
 export default function ReadmeViewer({ repoId, content, onEdit }) {
   const [readme, setReadme] = useState(content || '');
+  const [loading, setLoading] = useState(!content && Boolean(repoId));
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState('');
   const [copied, setCopied] = useState(false);
-
   const [fetchError, setFetchError] = useState('');
 
   useEffect(() => {
     if (content) {
       setReadme(content);
+      setLoading(false);
     } else if (repoId) {
-      // Fetch from API if content not provided directly
       fetchReadme();
     }
   }, [repoId, content]);
 
   const fetchReadme = async () => {
     try {
+      setLoading(true);
       setFetchError('');
       const res = await api.get(`/readme/${repoId}`);
-      setReadme(res.data.readme);
+      setReadme(res.data.readme || res.data.result?.content || '');
     } catch (err) {
       const serverMessage = err.response?.data?.message || err.message;
       console.error('Failed to fetch README:', serverMessage);
       setFetchError(serverMessage);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -120,7 +125,11 @@ export default function ReadmeViewer({ repoId, content, onEdit }) {
 
       {/* Content */}
       <div className="flex-1 overflow-auto">
-        {isEditing ? (
+        {loading ? (
+          <div className="flex items-center justify-center h-64">
+            <Spinner text="Generating README documentation..." />
+          </div>
+        ) : isEditing ? (
           <textarea
             value={editContent}
             onChange={(e) => setEditContent(e.target.value)}
