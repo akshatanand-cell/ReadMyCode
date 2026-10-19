@@ -32,7 +32,6 @@ api.interceptors.response.use(
   }
 );
 
-// Auth APIs
 export const authAPI = {
   login: (credentials) => api.post('/auth/login', credentials),
   register: (data) => api.post('/auth/register', data),
@@ -41,6 +40,8 @@ export const authAPI = {
   updateProfile: (data) => api.put('/auth/profile', data),
   forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
   resetPassword: (token, password) => api.post('/auth/reset-password', { token, password }),
+  getSecurityQuestion: (email) => api.post('/auth/security-question', { email }),
+  resetPasswordWithSecurity: (data) => api.post('/auth/reset-password-security', data),
 };
 
 // Repository APIs
@@ -56,6 +57,7 @@ export const repoAPI = {
     headers: { 'Content-Type': 'multipart/form-data' },
   }),
   pushToGithub: (id, data) => api.post(`/repos/${id}/push-to-github`, data),
+  getCommits: (id) => api.get(`/repos/${id}/commits`),
   getReadme: (repoId) => api.get(`/readme/${repoId}`),
   getApiDocs: (repoId) => api.get(`/docs/${repoId}`),
   getFlowchart: (repoId) => api.get(`/diagrams/flowchart/${repoId}`),

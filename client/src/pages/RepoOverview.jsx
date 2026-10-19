@@ -16,6 +16,9 @@ import {
   Bug,
   UploadCloud,
   CheckCircle2,
+  GitCommit,
+  Copy,
+  Check,
 } from 'lucide-react';
 import Card from '@/components/common/Card';
 import Button from '@/components/common/Button';
@@ -51,12 +54,27 @@ const RepoOverview = () => {
   const [pushToken, setPushToken] = useState('');
   const [isPrivateRepo, setIsPrivateRepo] = useState(false);
   const [isPushing, setIsPushing] = useState(false);
+  const [commits, setCommits] = useState([]);
+  const [loadingCommits, setLoadingCommits] = useState(false);
+  const [copiedSha, setCopiedSha] = useState(null);
 
   useEffect(() => {
     if (id) {
       fetchRepoDetails(id);
+      setLoadingCommits(true);
+      repoAPI
+        .getCommits(id)
+        .then((res) => setCommits(res.data?.commits || []))
+        .catch(() => setCommits([]))
+        .finally(() => setLoadingCommits(false));
     }
   }, [id]);
+
+  const handleCopySha = (sha) => {
+    navigator.clipboard.writeText(sha);
+    setCopiedSha(sha);
+    setTimeout(() => setCopiedSha(null), 2000);
+  };
 
   const handleDelete = async () => {
     try {
@@ -296,6 +314,118 @@ const RepoOverview = () => {
               </div>
             </div>
           </Card>
+        </div>
+
+        {/* GitHub-style Commits History Section */}
+        <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-border mb-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+                <GitCommit className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base font-bold text-text-primary">Repository Commits</h3>
+                  <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
+                    {commits.length} commits
+                  </span>
+                </div>
+                <p className="text-xs text-text-muted mt-0.5">
+                  Recent commit activity and historical revisions
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-background-secondary border border-border text-xs font-mono text-text-secondary">
+                <GitBranch className="w-3 h-3 text-primary" />
+                <span>{currentRepo.defaultBranch || 'main'}</span>
+              </span>
+              {currentRepo.repoUrl?.includes('github.com') && (
+                <a
+                  href={`${currentRepo.repoUrl}/commits`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-xs text-primary hover:underline font-medium ml-1"
+                >
+                  GitHub History <ExternalLink className="w-3 h-3" />
+                </a>
+              )}
+            </div>
+          </div>
+
+          {loadingCommits ? (
+            <div className="py-8 flex items-center justify-center text-text-muted text-sm gap-2">
+              <RefreshCw className="w-4 h-4 animate-spin text-primary" />
+              <span>Fetching repository commits...</span>
+            </div>
+          ) : commits.length === 0 ? (
+            <div className="py-8 text-center text-text-muted text-sm">
+              No commit history available for this repository snapshot.
+            </div>
+          ) : (
+            <div className="divide-y divide-border">
+              {commits.map((commit, idx) => (
+                <div
+                  key={commit.fullSha || idx}
+                  className="py-3 px-1 sm:px-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-background-secondary/50 rounded-lg transition"
+                >
+                  <div className="flex items-start sm:items-center gap-3 min-w-0">
+                    <img
+                      src={commit.authorAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(commit.author || 'Dev')}`}
+                      alt={commit.author}
+                      className="w-7 h-7 rounded-full object-cover shrink-0 border border-border mt-0.5 sm:mt-0"
+                    />
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-text-primary truncate">
+                        {commit.message}
+                      </p>
+                      <div className="flex items-center gap-2 text-xs text-text-muted mt-0.5">
+                        <span className="font-medium text-text-secondary">{commit.author}</span>
+                        <span>committed</span>
+                        <span>
+                          {commit.date ? new Date(commit.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'recently'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                    <button
+                      type="button"
+                      onClick={() => handleCopySha(commit.fullSha || commit.sha)}
+                      title="Copy full SHA"
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded bg-background-secondary hover:bg-border/50 border border-border text-[11px] font-mono text-text-secondary transition"
+                    >
+                      {copiedSha === (commit.fullSha || commit.sha) ? (
+                        <>
+                          <Check className="w-3 h-3 text-emerald-500" />
+                          <span className="text-emerald-500">Copied</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3 h-3" />
+                          <span>{commit.sha}</span>
+                        </>
+                      )}
+                    </button>
+
+                    {commit.url && commit.url !== '#' && (
+                      <a
+                        href={commit.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1 rounded text-text-muted hover:text-primary transition"
+                        title="View commit on GitHub"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Delete Confirmation Modal */}

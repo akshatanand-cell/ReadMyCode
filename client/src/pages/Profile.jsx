@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import Button from '@/components/common/Button';
 import Loader from '@/components/common/Loader';
+import ContributionHeatmap from '@/components/common/ContributionHeatmap';
 import api from '@/services/api';
 
 export default function Profile() {
@@ -219,6 +220,10 @@ export default function Profile() {
           <div className="bg-card rounded-xl p-6 shadow-sm border border-border">
             <div className="text-3xl font-bold text-amber-500">{stats.lastActive}</div>
             <div className="text-text-muted text-sm mt-1">Last Active</div>
+          </div>
+
+          <div className="md:col-span-3">
+            <ContributionHeatmap repos={repos} />
           </div>
 
           <div className="md:col-span-3 bg-card rounded-xl p-6 shadow-sm border border-border">

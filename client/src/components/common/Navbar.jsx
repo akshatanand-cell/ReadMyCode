@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Code2, Menu, X, Bell, Settings, LogOut, User, Sun, Moon, Github } from 'lucide-react';
+import { Code2, Menu, X, Bell, Settings, LogOut, User, Sun, Moon, Github, History } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import Button from './Button';
@@ -36,7 +36,7 @@ const Navbar = ({ onMenuToggle, isSidebarOpen }) => {
     <motion.nav
       initial={{ y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      className="fixed top-0 left-0 right-0 z-50 bg-card/90 backdrop-blur-xl border-b border-border shadow-sm transition-colors duration-200"
+      className="fixed top-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-xl border-b border-border shadow-sm transition-colors duration-200"
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
@@ -103,26 +103,54 @@ const Navbar = ({ onMenuToggle, isSidebarOpen }) => {
 
             {isAuthenticated ? (
               <>
-                {!isLandingPage && onMenuToggle && (
-                  <button
-                    onClick={onMenuToggle}
-                    className="lg:hidden p-2 text-text-secondary hover:text-text-primary hover:bg-border/40 rounded-xl border border-border transition-colors"
+                {/* Direct Top Bar Action Buttons for History, Profile, Sign Out on Every Page */}
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <Link
+                    to="/history"
+                    className={cn(
+                      'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all border',
+                      location.pathname === '/history'
+                        ? 'bg-primary text-white border-primary shadow-sm'
+                        : 'bg-background-secondary text-text-secondary hover:text-text-primary hover:bg-border/40 border-border'
+                    )}
+                    title="Analysis History"
                   >
-                    {isSidebarOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+                    <History className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">History</span>
+                  </Link>
+
+                  <Link
+                    to="/profile"
+                    className={cn(
+                      'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all border',
+                      location.pathname === '/profile'
+                        ? 'bg-primary text-white border-primary shadow-sm'
+                        : 'bg-background-secondary text-text-secondary hover:text-text-primary hover:bg-border/40 border-border'
+                    )}
+                    title="User Profile & Settings"
+                  >
+                    <User className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Profile</span>
+                  </Link>
+
+                  <button
+                    type="button"
+                    onClick={logout}
+                    className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-rose-500 hover:text-white bg-rose-500/10 hover:bg-rose-600 border border-rose-500/20 hover:border-rose-600 transition-all shadow-sm"
+                    title="Sign Out of Account"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Sign Out</span>
                   </button>
-                )}
-                <button
-                  className="relative p-2 text-text-secondary hover:text-text-primary hover:bg-border/40 rounded-xl border border-border transition-colors"
-                  title="Notifications"
-                >
-                  <Bell className="w-4 h-4" />
-                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-error rounded-full" />
-                </button>
+                </div>
+
+                <div className="h-5 w-[1px] bg-border mx-0.5 sm:mx-1 hidden md:block" />
+
                 <Dropdown
                   trigger={
                     <div className="flex items-center gap-2 cursor-pointer p-1 rounded-xl hover:bg-border/30 transition-colors">
                       <Avatar name={user?.name || user?.email} size="sm" />
-                      <span className="hidden sm:block text-sm font-medium text-text-secondary">
+                      <span className="hidden lg:block text-xs font-semibold text-text-primary truncate max-w-[90px]">
                         {user?.name || user?.email?.split('@')[0]}
                       </span>
                     </div>
@@ -186,6 +214,38 @@ const Navbar = ({ onMenuToggle, isSidebarOpen }) => {
               );
             })}
           </div>
+
+          {isAuthenticated && (
+            <div className="pt-2 border-t border-border grid grid-cols-3 gap-2">
+              <Link
+                to="/history"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg bg-background-secondary border border-border text-xs font-semibold text-text-secondary hover:text-text-primary"
+              >
+                <History className="w-3.5 h-3.5 text-primary" />
+                <span>History</span>
+              </Link>
+              <Link
+                to="/profile"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg bg-background-secondary border border-border text-xs font-semibold text-text-secondary hover:text-text-primary"
+              >
+                <User className="w-3.5 h-3.5 text-primary" />
+                <span>Profile</span>
+              </Link>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  logout();
+                }}
+                className="flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg bg-rose-500/10 border border-rose-500/20 text-xs font-semibold text-rose-500 hover:bg-rose-600 hover:text-white transition-colors"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Sign Out</span>
+              </button>
+            </div>
+          )}
 
           <div className="pt-2 border-t border-border flex items-center justify-between">
             <span className="text-xs text-text-muted">Appearance</span>

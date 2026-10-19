@@ -19,7 +19,8 @@ import Card, { CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import Button from '@/components/common/Button';
 import Badge from '@/components/common/Badge';
 import { SkeletonCard } from '@/components/common/Skeleton';
-import EmptyState from '@/components/common/EmptyState'; 
+import EmptyState from '@/components/common/EmptyState';
+import ContributionHeatmap from '@/components/common/ContributionHeatmap';
 import { cn } from '@/utils/helpers';
 
 const StatCard = ({ icon: Icon, label, value, color }) => (
@@ -109,6 +110,8 @@ const Dashboard = () => {
         <StatCard icon={FunctionSquare} label="Total Analyses" value={stats?.totalAnalyses || 0} color="bg-accent/10 text-accent" />
         <StatCard icon={Clock} label="Failed / Issues" value={stats?.failedRepos || 0} color="bg-warning/10 text-warning" />
       </div>
+
+      <ContributionHeatmap repos={recentRepos} />
 
       <div>
         <div className="flex items-center justify-between mb-4">

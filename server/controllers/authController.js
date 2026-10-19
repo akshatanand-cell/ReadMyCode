@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
+const bcrypt = require("bcryptjs");
 const User = require("../models/User");
 const { JWT_SECRET, JWT_EXPIRES_IN, CLIENT_URL } = require("../config/env");
 const { sendPasswordResetEmail } = require("../services/emailService");
@@ -17,20 +18,38 @@ function signToken(id) {
 
 async function register(req, res, next) {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, securityQuestion, securityAnswer } = req.body;
     if (!name || !email || !password) {
       return res.status(400).json({ message: "name, email, and password are required" });
     }
 
     let existing, user;
+    let hashedSecurityAnswer = null;
+    if (securityAnswer) {
+      const salt = await bcrypt.genSalt(10);
+      hashedSecurityAnswer = await bcrypt.hash(securityAnswer.toLowerCase().trim(), salt);
+    }
+
     if (isDbConnected()) {
       existing = await User.findOne({ email });
       if (existing) return res.status(409).json({ message: "Email already registered" });
-      user = await User.create({ name, email, password });
+      user = await User.create({
+        name,
+        email,
+        password,
+        securityQuestion: securityQuestion || null,
+        securityAnswer: hashedSecurityAnswer,
+      });
     } else {
       existing = await memoryStore.findUserByEmail(email);
       if (existing) return res.status(409).json({ message: "Email already registered" });
-      user = await memoryStore.createUser({ name, email, password });
+      user = await memoryStore.createUser({
+        name,
+        email,
+        password,
+        securityQuestion: securityQuestion || null,
+        securityAnswer,
+      });
     }
 
     const token = signToken(user._id);
@@ -271,4 +290,110 @@ async function resetPassword(req, res, next) {
   }
 }
 
-module.exports = { register, login, getMe, logout, updateProfile, forgotPassword, resetPassword };
+async function getSecurityQuestion(req, res, next) {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+
+    let user;
+    if (isDbConnected()) {
+      user = await User.findOne({ email }).select("+securityQuestion");
+    } else {
+      user = await memoryStore.findUserByEmail(email);
+    }
+
+    if (!user || !user.securityQuestion) {
+      return res.status(404).json({
+        message: "No security question found for this account. Please verify your email or contact support.",
+      });
+    }
+
+    res.json({
+      email: user.email,
+      securityQuestion: user.securityQuestion,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function resetPasswordWithSecurityQuestion(req, res, next) {
+  try {
+    const { email, securityAnswer, newPassword } = req.body;
+    if (!email || !securityAnswer || !newPassword) {
+      return res.status(400).json({ message: "Email, security answer, and new password are required" });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: "Password must be at least 6 characters long" });
+    }
+
+    let user;
+    if (isDbConnected()) {
+      user = await User.findOne({ email }).select("+password +securityAnswer +securityQuestion");
+    } else {
+      user = await memoryStore.findUserByEmail(email);
+    }
+
+    if (!user) {
+      return res.status(404).json({ message: "Account not found with this email" });
+    }
+
+    if (!user.securityAnswer) {
+      return res.status(400).json({ message: "No security answer was set up for this account" });
+    }
+
+    let isAnswerCorrect = false;
+    if (typeof user.compareSecurityAnswer === "function") {
+      isAnswerCorrect = await user.compareSecurityAnswer(securityAnswer);
+    } else {
+      isAnswerCorrect = await bcrypt.compare(securityAnswer.toLowerCase().trim(), user.securityAnswer);
+    }
+
+    if (!isAnswerCorrect) {
+      return res.status(400).json({ message: "Incorrect security answer. Please check your answer and try again." });
+    }
+
+    if (isDbConnected()) {
+      user.password = newPassword; // pre-save hook re-hashes
+      user.resetPasswordToken = undefined;
+      user.resetPasswordExpire = undefined;
+      await user.save();
+    } else {
+      const salt = await bcrypt.genSalt(10);
+      user.password = await bcrypt.hash(newPassword, salt);
+      delete user.resetPasswordToken;
+      delete user.resetPasswordExpire;
+      memoryStore.saveStore();
+    }
+
+    const token = signToken(user._id);
+
+    res.json({
+      message: "Password reset successful! You are now logged in.",
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        githubUsername: user.githubUsername || null,
+        hasGithubToken: Boolean(user.githubToken),
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = {
+  register,
+  login,
+  getMe,
+  logout,
+  updateProfile,
+  forgotPassword,
+  resetPassword,
+  getSecurityQuestion,
+  resetPasswordWithSecurityQuestion,
+};

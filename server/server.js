@@ -1,3 +1,7 @@
+try {
+  require("dns").setServers(["8.8.8.8", "1.1.1.1", "8.8.4.4"]);
+} catch (_e) {}
+
 const app = require("./app");
 const connectDB = require("./config/db");
 const { PORT } = require("./config/env");

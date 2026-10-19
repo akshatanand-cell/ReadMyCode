@@ -1,16 +1,24 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Code2, Mail, User, ArrowRight, Eye, EyeOff, Github } from 'lucide-react';
+import { Code2, Mail, User, Eye, EyeOff, Github, ShieldQuestion, KeyRound } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import Button from '@/components/common/Button';
 import Input from '@/components/common/Input';
+import { SECURITY_QUESTIONS } from '@/utils/constants';
 import { cn } from '@/utils/helpers';
 
 const Register = () => {
   const navigate = useNavigate();
   const { register } = useAuth();
-  const [formData, setFormData] = useState({ name: '', email: '', password: '', confirmPassword: '' });
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    securityQuestion: SECURITY_QUESTIONS[0],
+    securityAnswer: '',
+  });
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -23,6 +31,12 @@ const Register = () => {
     if (!formData.password) newErrors.password = 'Password is required';
     else if (formData.password.length < 6) newErrors.password = 'Min 6 characters';
     if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = 'Passwords do not match';
+    if (!formData.securityQuestion) newErrors.securityQuestion = 'Please select a security question';
+    if (!formData.securityAnswer.trim()) {
+      newErrors.securityAnswer = 'Security answer is required for account recovery';
+    } else if (formData.securityAnswer.trim().length < 2) {
+      newErrors.securityAnswer = 'Security answer must be at least 2 characters';
+    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -121,8 +135,55 @@ const Register = () => {
               {errors.confirmPassword && <p className="mt-1.5 text-sm text-error">{errors.confirmPassword}</p>}
             </div>
 
+            {/* Security Question for Password Recovery */}
+            <div className="pt-2 border-t border-border/60">
+              <div className="flex items-center gap-1.5 mb-2">
+                <ShieldQuestion className="w-4 h-4 text-primary" />
+                <label className="block text-sm font-semibold text-text-primary">
+                  Password Recovery Question
+                </label>
+              </div>
+              <p className="text-xs text-text-muted mb-2.5">
+                Choose 1 of the 10 security questions to protect and recover your account if you ever forget your password.
+              </p>
+              <select
+                value={formData.securityQuestion}
+                onChange={(e) => setFormData({ ...formData, securityQuestion: e.target.value })}
+                className="input-field bg-background-secondary cursor-pointer text-sm mb-3"
+              >
+                {SECURITY_QUESTIONS.map((question, idx) => (
+                  <option key={idx} value={question} className="bg-card text-text-primary">
+                    {idx + 1}. {question}
+                  </option>
+                ))}
+              </select>
+              {errors.securityQuestion && (
+                <p className="mt-1 text-sm text-error">{errors.securityQuestion}</p>
+              )}
+
+              <div>
+                <label className="block text-xs font-medium text-text-secondary mb-1.5 flex items-center gap-1">
+                  <KeyRound className="w-3.5 h-3.5 text-text-muted" />
+                  Your Secret Answer
+                </label>
+                <input
+                  type="text"
+                  placeholder="Enter your memorable answer"
+                  value={formData.securityAnswer}
+                  onChange={(e) => setFormData({ ...formData, securityAnswer: e.target.value })}
+                  className={cn(
+                    'input-field text-sm',
+                    errors.securityAnswer && 'border-error focus:border-error focus:ring-error/50'
+                  )}
+                />
+                {errors.securityAnswer && (
+                  <p className="mt-1.5 text-sm text-error">{errors.securityAnswer}</p>
+                )}
+              </div>
+            </div>
+
             <div className="flex items-center gap-2">
-              <input type="checkbox" className="w-4 h-4 rounded border-border bg-background-secondary text-primary focus:ring-primary" />
+              <input type="checkbox" required className="w-4 h-4 rounded border-border bg-background-secondary text-primary focus:ring-primary" />
               <span className="text-sm text-text-secondary">
                 I agree to the <Link to="/terms" className="text-primary hover:underline">Terms</Link> and <Link to="/privacy" className="text-primary hover:underline">Privacy Policy</Link>
               </span>

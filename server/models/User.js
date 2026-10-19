@@ -8,6 +8,8 @@ const userSchema = new mongoose.Schema(
     password: { type: String, required: true, minlength: 6, select: false },
     githubToken: { type: String, select: false },
     githubUsername: { type: String, trim: true },
+    securityQuestion: { type: String, trim: true },
+    securityAnswer: { type: String, select: false },
     resetPasswordToken: { type: String, select: false },
     resetPasswordExpire: { type: Date, select: false },
   },
@@ -23,6 +25,11 @@ userSchema.pre("save", async function (next) {
 
 userSchema.methods.comparePassword = function (candidate) {
   return bcrypt.compare(candidate, this.password);
+};
+
+userSchema.methods.compareSecurityAnswer = function (candidate) {
+  if (!this.securityAnswer || !candidate) return false;
+  return bcrypt.compare(candidate.toLowerCase().trim(), this.securityAnswer);
 };
 
 module.exports = mongoose.model("User", userSchema);

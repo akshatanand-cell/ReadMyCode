@@ -96,3 +96,16 @@ export const THEME_COLORS = {
   error: '#EF4444',
   warning: '#F59E0B',
 };
+
+export const SECURITY_QUESTIONS = [
+  "What was the name of your first pet?",
+  "What was the make or model of your first car?",
+  "In what city or town were you born?",
+  "What was the name of your first elementary school?",
+  "What is your mother's maiden name?",
+  "What was your childhood nickname?",
+  "What was the name of the street you grew up on?",
+  "What was your favorite food or meal as a child?",
+  "What is the title of your all-time favorite movie or book?",
+  "What was the first live music concert or show you attended?"
+];

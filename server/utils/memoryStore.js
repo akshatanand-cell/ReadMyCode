@@ -22,6 +22,10 @@ function loadStore() {
           u.comparePassword = async function (candidatePassword) {
             return bcrypt.compare(candidatePassword, this.password);
           };
+          u.compareSecurityAnswer = async function (candidateAnswer) {
+            if (!this.securityAnswer || !candidateAnswer) return false;
+            return bcrypt.compare(candidateAnswer.toLowerCase().trim(), this.securityAnswer);
+          };
           memoryDb.users.set(String(u._id), u);
         }
       }
@@ -53,6 +57,8 @@ function saveStore() {
         password: u.password,
         githubToken: u.githubToken || null,
         githubUsername: u.githubUsername || null,
+        securityQuestion: u.securityQuestion || null,
+        securityAnswer: u.securityAnswer || null,
         createdAt: u.createdAt,
       })),
       repos: Array.from(memoryDb.repos.values()),
@@ -81,9 +87,13 @@ async function findUserById(id) {
   return memoryDb.users.get(String(id)) || null;
 }
 
-async function createUser({ name, email, password, githubToken, githubUsername }) {
+async function createUser({ name, email, password, githubToken, githubUsername, securityQuestion, securityAnswer }) {
   const salt = await bcrypt.genSalt(10);
   const hashedPassword = await bcrypt.hash(password, salt);
+  let hashedSecurityAnswer = null;
+  if (securityAnswer) {
+    hashedSecurityAnswer = await bcrypt.hash(securityAnswer.toLowerCase().trim(), salt);
+  }
   const _id = "mem_user_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
   const user = {
     _id,
@@ -92,9 +102,15 @@ async function createUser({ name, email, password, githubToken, githubUsername }
     password: hashedPassword,
     githubToken: githubToken || null,
     githubUsername: githubUsername || null,
+    securityQuestion: securityQuestion || null,
+    securityAnswer: hashedSecurityAnswer,
     createdAt: new Date(),
     comparePassword: async function (candidatePassword) {
       return bcrypt.compare(candidatePassword, this.password);
+    },
+    compareSecurityAnswer: async function (candidateAnswer) {
+      if (!this.securityAnswer || !candidateAnswer) return false;
+      return bcrypt.compare(candidateAnswer.toLowerCase().trim(), this.securityAnswer);
     },
   };
   memoryDb.users.set(_id, user);
