@@ -22,9 +22,9 @@ const Card = React.forwardRef(({
     <motion.div
       ref={ref}
       className={cn(
-        'bg-[#0F172A]/95 border border-white/10 rounded-2xl transition-all duration-300 shadow-xl',
+        'bg-card border border-border rounded-2xl transition-all duration-300 shadow-xl',
         paddings[padding],
-        hover && 'hover:border-indigo-500/40 hover:-translate-y-1 hover:shadow-2xl hover:shadow-indigo-500/10 cursor-pointer',
+        hover && 'hover:border-primary/40 hover:-translate-y-1 hover:shadow-2xl hover:shadow-primary/10 cursor-pointer',
         glow && 'shadow-glow hover:shadow-glow-lg',
         onClick && 'cursor-pointer',
         className

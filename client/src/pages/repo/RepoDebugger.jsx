@@ -24,7 +24,7 @@ export default function RepoDebugger() {
   };
 
   return (
-    <div className="p-6 h-[calc(100vh-100px)] overflow-y-auto">
+    <div className="space-y-4">
       <DebuggerUI onDebug={handleDebug} isLoading={isLoading} />
     </div>
   );

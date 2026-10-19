@@ -28,13 +28,20 @@ export default function RepoFlowchart() {
   if (loading) return <Spinner text="Generating flowchart diagram..." />;
 
   return (
-    <div className="p-6 space-y-4">
-      <h2 className="text-xl font-bold text-text-primary">Flowchart & Logic Diagrams</h2>
+    <div className="space-y-5">
+      <div>
+        <h2 className="text-2xl font-bold text-text-primary tracking-tight">Flowchart & Logic Diagrams</h2>
+        <p className="text-sm text-text-secondary mt-1">
+          Interactive flowcharts and system control logic mapped from repository AST.
+        </p>
+      </div>
+
       {error && (
-        <div className="px-4 py-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg text-sm">
+        <div className="px-4 py-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-sm">
           {error}
         </div>
       )}
+
       <MermaidDiagram definition={definition || `graph TD\n  A[Repository Entry] --> B[Flowchart Analysis]`} />
     </div>
   );

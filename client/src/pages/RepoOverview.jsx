@@ -154,13 +154,13 @@ const RepoOverview = () => {
                   transition={{ delay: index * 0.05 }}
                 >
                   <Link to={`/repo/${id}/${tab.path}`}>
-                    <Card hover glow className="h-full border border-white/10 bg-slate-900/80 backdrop-blur-xl hover:border-indigo-500/50 hover:shadow-2xl hover:shadow-indigo-500/10 group transition-all duration-300">
+                    <Card hover glow className="h-full border border-border bg-card backdrop-blur-xl hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/10 group transition-all duration-300">
                       <div className="flex items-start gap-4">
-                        <div className="w-12 h-12 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 rounded-xl flex items-center justify-center group-hover:scale-110 group-hover:bg-indigo-500 transition-all duration-300 shadow-md">
-                          <Icon className="w-6 h-6 text-indigo-400 group-hover:text-white transition-colors" />
+                        <div className="w-12 h-12 bg-primary/10 border border-primary/25 rounded-xl flex items-center justify-center group-hover:scale-110 group-hover:bg-primary transition-all duration-300 shadow-md">
+                          <Icon className="w-6 h-6 text-primary group-hover:text-white transition-colors" />
                         </div>
                         <div className="flex-1">
-                          <h3 className="text-base font-bold text-white group-hover:text-indigo-300 transition-colors">{tab.label}</h3>
+                          <h3 className="text-base font-bold text-text-primary group-hover:text-primary transition-colors">{tab.label}</h3>
                           <p className="text-xs text-text-secondary mt-1 leading-relaxed">
                             {tab.path === 'readme' && 'AI-generated markdown documentation'}
                             {tab.path === 'api-docs' && 'Structured RESTful API endpoints'}
@@ -170,7 +170,7 @@ const RepoOverview = () => {
                             {tab.path === 'debugger' && 'AI-assisted code debugger'}
                           </p>
                         </div>
-                        <ChevronRight className="w-5 h-5 text-text-muted group-hover:text-indigo-400 group-hover:translate-x-1 transition-all" />
+                        <ChevronRight className="w-5 h-5 text-text-muted group-hover:text-primary group-hover:translate-x-1 transition-all" />
                       </div>
                     </Card>
                   </Link>
@@ -182,48 +182,48 @@ const RepoOverview = () => {
 
         {/* Repo Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
-          <Card className="border border-white/10 bg-slate-900/80 backdrop-blur-xl">
+          <Card className="border border-border bg-card backdrop-blur-xl">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-indigo-500/15 border border-indigo-500/30 rounded-xl flex items-center justify-center shadow-inner">
-                <FileCode className="w-6 h-6 text-indigo-400" />
+              <div className="w-12 h-12 bg-primary/10 border border-primary/20 rounded-xl flex items-center justify-center shadow-inner">
+                <FileCode className="w-6 h-6 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-extrabold text-white tracking-tight">{currentRepo.fileCount || currentRepo.fileTree?.length || 0}</p>
+                <p className="text-2xl font-extrabold text-text-primary tracking-tight">{currentRepo.fileCount || currentRepo.fileTree?.length || 0}</p>
                 <p className="text-xs font-medium text-text-secondary uppercase tracking-wider">Total Files</p>
               </div>
             </div>
           </Card>
-          <Card className="border border-white/10 bg-slate-900/80 backdrop-blur-xl">
+          <Card className="border border-border bg-card backdrop-blur-xl">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-sky-500/15 border border-sky-500/30 rounded-xl flex items-center justify-center shadow-inner">
-                <Folder className="w-6 h-6 text-sky-400" />
+              <div className="w-12 h-12 bg-secondary/10 border border-secondary/20 rounded-xl flex items-center justify-center shadow-inner">
+                <Folder className="w-6 h-6 text-secondary" />
               </div>
               <div>
-                <p className="text-2xl font-extrabold text-white tracking-tight">
+                <p className="text-2xl font-extrabold text-text-primary tracking-tight">
                   {currentRepo.directoryCount || (currentRepo.fileTree ? currentRepo.fileTree.filter((f) => f.type === 'directory').length : 0)}
                 </p>
                 <p className="text-xs font-medium text-text-secondary uppercase tracking-wider">Directories</p>
               </div>
             </div>
           </Card>
-          <Card className="border border-white/10 bg-slate-900/80 backdrop-blur-xl">
+          <Card className="border border-border bg-card backdrop-blur-xl">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-purple-500/15 border border-purple-500/30 rounded-xl flex items-center justify-center shadow-inner">
-                <GitBranch className="w-6 h-6 text-purple-400" />
+              <div className="w-12 h-12 bg-accent/10 border border-accent/20 rounded-xl flex items-center justify-center shadow-inner">
+                <GitBranch className="w-6 h-6 text-accent" />
               </div>
               <div>
-                <p className="text-2xl font-extrabold text-white tracking-tight">{currentRepo.languageCount || 1}</p>
+                <p className="text-2xl font-extrabold text-text-primary tracking-tight">{currentRepo.languageCount || 1}</p>
                 <p className="text-xs font-medium text-text-secondary uppercase tracking-wider">Languages</p>
               </div>
             </div>
           </Card>
-          <Card className="border border-white/10 bg-slate-900/80 backdrop-blur-xl">
+          <Card className="border border-border bg-card backdrop-blur-xl">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-emerald-500/15 border border-emerald-500/30 rounded-xl flex items-center justify-center shadow-inner">
-                <Clock className="w-6 h-6 text-emerald-400" />
+              <div className="w-12 h-12 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center justify-center shadow-inner">
+                <Clock className="w-6 h-6 text-emerald-500" />
               </div>
               <div>
-                <p className="text-2xl font-extrabold text-white tracking-tight">{currentRepo.analysisDuration || '1.2s'}</p>
+                <p className="text-2xl font-extrabold text-text-primary tracking-tight">{currentRepo.analysisDuration || '1.2s'}</p>
                 <p className="text-xs font-medium text-text-secondary uppercase tracking-wider">Analysis Speed</p>
               </div>
             </div>

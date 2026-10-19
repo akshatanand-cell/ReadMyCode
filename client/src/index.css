@@ -3,6 +3,36 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    /* GitHub Light / Primer Palette (R G B space-separated for Tailwind alpha support) */
+    --color-bg: 246 248 250;
+    --color-bg-subtle: 255 255 255;
+    --color-card: 255 255 255;
+    --color-border: 208 215 222;
+    --color-border-light: 225 228 232;
+    --color-text-primary: 31 35 40;
+    --color-text-secondary: 87 96 106;
+    --color-text-muted: 110 119 129;
+    --color-primary: 9 105 218;
+    --color-primary-hover: 8 92 192;
+    --color-accent: 130 80 223;
+  }
+
+  html.dark {
+    /* GitHub Dark / Primer Dark Palette */
+    --color-bg: 13 17 23;
+    --color-bg-subtle: 22 27 34;
+    --color-card: 22 27 34;
+    --color-border: 48 54 61;
+    --color-border-light: 33 38 45;
+    --color-text-primary: 240 246 252;
+    --color-text-secondary: 139 148 158;
+    --color-text-muted: 125 133 144;
+    --color-primary: 88 166 255;
+    --color-primary-hover: 56 139 253;
+    --color-accent: 163 113 247;
+  }
+
   html {
     scroll-behavior: smooth;
     -webkit-font-smoothing: antialiased;
@@ -12,7 +42,7 @@
 
   body {
     @apply bg-background text-text-primary antialiased;
-    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
     letter-spacing: -0.01em;
   }
 
@@ -37,50 +67,50 @@ svg[id^="dmermaid"] {
 
 @layer components {
   .glass {
-    @apply bg-[#0F172A]/90 backdrop-blur-xl border border-white/10 shadow-2xl;
+    @apply bg-card/90 backdrop-blur-xl border border-border shadow-xl;
   }
 
   .text-gradient {
-    @apply bg-gradient-to-r from-indigo-400 via-sky-400 to-purple-400 bg-clip-text text-transparent font-extrabold;
+    @apply bg-gradient-to-r from-indigo-500 via-sky-500 to-purple-500 dark:from-indigo-400 dark:via-sky-400 dark:to-purple-400 bg-clip-text text-transparent font-extrabold;
   }
 
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold rounded-xl shadow-lg shadow-indigo-500/25 transition-all duration-200 active:scale-95 disabled:opacity-50 border border-white/10;
+    @apply inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold rounded-xl shadow-md shadow-indigo-500/20 transition-all duration-200 active:scale-95 disabled:opacity-50 border border-white/10;
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 px-6 py-3 bg-slate-800/80 hover:bg-slate-700/80 text-text-primary font-medium rounded-xl border border-white/10 hover:border-white/20 shadow-md transition-all duration-200 active:scale-95;
+    @apply inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-background-secondary hover:bg-border/60 text-text-primary font-medium rounded-xl border border-border shadow-sm transition-all duration-200 active:scale-95;
   }
 
   .btn-ghost {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2 text-text-secondary hover:text-text-primary hover:bg-white/5 rounded-xl transition-all duration-200;
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 text-text-secondary hover:text-text-primary hover:bg-border/30 rounded-xl transition-all duration-200;
   }
 
   .input-field {
-    @apply w-full px-4 py-3 bg-slate-900/90 border border-white/10 rounded-xl text-text-primary placeholder-text-muted focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-sans;
+    @apply w-full px-4 py-2.5 bg-card border border-border rounded-xl text-text-primary placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-sans;
   }
 
   .badge-primary {
-    @apply bg-primary/20 text-primary border border-primary/30;
+    @apply bg-primary/10 text-primary border border-primary/25;
   }
 
   .badge-secondary {
-    @apply bg-secondary/10 text-secondary border border-secondary/30;
+    @apply bg-secondary/10 text-secondary border border-secondary/25;
   }
 
   .badge-accent {
-    @apply bg-accent/10 text-accent border border-accent/30;
+    @apply bg-accent/10 text-accent border border-accent/25;
   }
 
   .badge-success {
-    @apply bg-success/10 text-success border border-success/30;
+    @apply bg-success/10 text-success border border-success/25;
   }
 }
 
 @layer utilities {
   .scrollbar-thin {
     scrollbar-width: thin;
-    scrollbar-color: #334155 #1E293B;
+    scrollbar-color: rgb(var(--color-border)) rgb(var(--color-bg));
   }
 
   .scrollbar-thin::-webkit-scrollbar {
@@ -89,10 +119,10 @@ svg[id^="dmermaid"] {
   }
 
   .scrollbar-thin::-webkit-scrollbar-track {
-    @apply bg-background-secondary rounded;
+    @apply bg-background rounded;
   }
 
   .scrollbar-thin::-webkit-scrollbar-thumb {
-    @apply bg-border-light rounded;
+    @apply bg-border rounded;
   }
 }

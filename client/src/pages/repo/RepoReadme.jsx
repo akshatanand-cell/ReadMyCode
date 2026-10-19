@@ -5,7 +5,7 @@ export default function RepoReadme() {
   const { id } = useParams();
 
   return (
-    <div className="p-6">
+    <div className="space-y-4">
       <ReadmeViewer repoId={id} />
     </div>
   );

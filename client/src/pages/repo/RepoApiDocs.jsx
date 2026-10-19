@@ -6,7 +6,7 @@ export default function RepoApiDocs() {
   const { id } = useParams();
 
   return (
-    <div className="p-6 h-[calc(100vh-100px)]">
+    <div className="space-y-4 min-h-[650px]">
       <ApiDocsViewer repoId={id} />
     </div>
   );

@@ -13,7 +13,7 @@ const Layout = () => {
   const showSidebar = isAuthenticated;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background text-text-primary transition-colors duration-200">
       <Navbar
         onMenuToggle={() => setIsSidebarOpen(!isSidebarOpen)}
         isSidebarOpen={isSidebarOpen}

@@ -31,16 +31,16 @@ export default function RepoArchitecture() {
   if (loading) return <Spinner text="Generating architecture diagram..." />;
 
   return (
-    <div className="p-6 space-y-4">
+    <div className="space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h2 className="text-xl font-bold text-text-primary">System Architecture Map</h2>
-          <p className="text-xs text-text-secondary mt-0.5">Explore component hierarchies, services, and system connectivity</p>
+          <h2 className="text-2xl font-bold text-text-primary tracking-tight">System Architecture Map</h2>
+          <p className="text-sm text-text-secondary mt-1">Explore component hierarchies, service layers, and connectivity</p>
         </div>
-        <div className="flex items-center gap-2 bg-background-secondary p-1 rounded-lg border border-border">
+        <div className="flex items-center gap-1.5 bg-background-secondary p-1 rounded-xl border border-border">
           <button
             onClick={() => setViewMode('mermaid')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
               viewMode === 'mermaid' ? 'bg-primary text-white shadow-sm' : 'text-text-secondary hover:text-text-primary'
             }`}
           >
@@ -49,7 +49,7 @@ export default function RepoArchitecture() {
           </button>
           <button
             onClick={() => setViewMode('reactflow')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
               viewMode === 'reactflow' ? 'bg-primary text-white shadow-sm' : 'text-text-secondary hover:text-text-primary'
             }`}
           >
@@ -60,7 +60,7 @@ export default function RepoArchitecture() {
       </div>
 
       {error && (
-        <div className="px-4 py-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg text-sm">
+        <div className="px-4 py-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-sm">
           {error}
         </div>
       )}

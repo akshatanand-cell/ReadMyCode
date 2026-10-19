@@ -28,14 +28,14 @@ export default function RepoFunctions() {
   if (loading) return <Spinner text="Analyzing and explaining functions..." />;
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-text-primary">Function Explanations</h2>
-        <p className="text-sm text-text-secondary">AI-generated breakdown of key codebase functions.</p>
+        <h2 className="text-2xl font-bold text-text-primary tracking-tight">Function Explanations</h2>
+        <p className="text-sm text-text-secondary mt-1">AI-generated breakdown and complexity analysis of codebase functions.</p>
       </div>
 
       {error && (
-        <div className="px-4 py-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg text-sm">
+        <div className="px-4 py-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-sm">
           {error}
         </div>
       )}
