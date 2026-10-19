@@ -5,6 +5,7 @@ import { Code2, Github, Mail, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import Button from '@/components/common/Button';
 import Input from '@/components/common/Input';
+import GithubConnectModal from '@/components/common/GithubConnectModal';
 import { cn } from '@/utils/helpers';
 
 const Login = () => {
@@ -14,6 +15,7 @@ const Login = () => {
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [isGithubModalOpen, setIsGithubModalOpen] = useState(false);
 
   const validate = () => {
     const newErrors = {};
@@ -121,9 +123,13 @@ const Login = () => {
               </div>
             </div>
 
-            <button className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-3 bg-background-secondary border border-border rounded-lg text-text-secondary hover:text-text-primary hover:border-border-light transition-all">
-              <Github className="w-5 h-5" />
-              <span className="text-sm font-medium">GitHub</span>
+            <button
+              type="button"
+              onClick={() => setIsGithubModalOpen(true)}
+              className="mt-4 w-full flex items-center justify-center gap-2.5 px-4 py-3 bg-background-secondary border border-border rounded-xl text-text-primary hover:bg-border/30 hover:border-primary/50 transition-all shadow-sm font-semibold text-sm group"
+            >
+              <Github className="w-5 h-5 text-text-primary group-hover:scale-110 transition-transform" />
+              <span>Continue with GitHub</span>
             </button>
           </div>
         </div>
@@ -134,6 +140,13 @@ const Login = () => {
             Sign up
           </Link>
         </p>
+
+        {/* GitHub Connect Modal */}
+        <GithubConnectModal
+          isOpen={isGithubModalOpen}
+          onClose={() => setIsGithubModalOpen(false)}
+          onSuccess={() => navigate('/dashboard')}
+        />
       </motion.div>
     </div>
   );

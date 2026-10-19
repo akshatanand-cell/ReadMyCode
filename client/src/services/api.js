@@ -42,6 +42,8 @@ export const authAPI = {
   resetPassword: (token, password) => api.post('/auth/reset-password', { token, password }),
   getSecurityQuestion: (email) => api.post('/auth/security-question', { email }),
   resetPasswordWithSecurity: (data) => api.post('/auth/reset-password-security', data),
+  githubLogin: (data) => api.post('/auth/github', data),
+  getGithubRepos: (params) => api.get('/auth/github/repos', { params }),
 };
 
 // Repository APIs

@@ -35,6 +35,8 @@ module.exports = {
   JWT_SECRET: process.env.JWT_SECRET || "readmycode_jwt_secret_key_2026",
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || "7d",
   GITHUB_TOKEN: process.env.GITHUB_TOKEN,
+  GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID || "",
+  GITHUB_CLIENT_SECRET: process.env.GITHUB_CLIENT_SECRET || "",
   XAI_API_KEY: apiKey,
   AI_MODEL: process.env.AI_MODEL || "grok-2-latest",
   CLIENT_URL: process.env.CLIENT_URL || "http://localhost:5173",

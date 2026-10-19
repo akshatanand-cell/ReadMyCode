@@ -3,7 +3,7 @@ const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
 const User = require("../models/User");
-const { JWT_SECRET, JWT_EXPIRES_IN, CLIENT_URL } = require("../config/env");
+const { JWT_SECRET, JWT_EXPIRES_IN, CLIENT_URL, GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET } = require("../config/env");
 const { sendPasswordResetEmail } = require("../services/emailService");
 const logger = require("../utils/logger");
 const memoryStore = require("../utils/memoryStore");
@@ -386,6 +386,216 @@ async function resetPasswordWithSecurityQuestion(req, res, next) {
   }
 }
 
+async function githubAuth(req, res, next) {
+  try {
+    const { code, token: inputToken, username: inputUsername } = req.body;
+    let ghToken = inputToken;
+
+    // If OAuth code provided, exchange it for access token
+    if (code && GITHUB_CLIENT_ID && GITHUB_CLIENT_SECRET) {
+      const tokenRes = await fetch("https://github.com/login/oauth/access_token", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          client_id: GITHUB_CLIENT_ID,
+          client_secret: GITHUB_CLIENT_SECRET,
+          code,
+        }),
+      });
+      const tokenData = await tokenRes.json();
+      if (tokenData.access_token) {
+        ghToken = tokenData.access_token;
+      } else {
+        return res.status(400).json({ message: tokenData.error_description || "GitHub authentication failed" });
+      }
+    }
+
+    let ghUser = null;
+    if (ghToken) {
+      const ghRes = await fetch("https://api.github.com/user", {
+        headers: {
+          Authorization: `Bearer ${ghToken}`,
+          "User-Agent": "ReadMyCode-App",
+          Accept: "application/vnd.github+json",
+        },
+      });
+      if (!ghRes.ok) {
+        return res.status(401).json({ message: "Invalid or expired GitHub token" });
+      }
+      ghUser = await ghRes.json();
+
+      // If user's email is private on GitHub, fetch from /user/emails
+      if (!ghUser.email) {
+        try {
+          const emailsRes = await fetch("https://api.github.com/user/emails", {
+            headers: {
+              Authorization: `Bearer ${ghToken}`,
+              "User-Agent": "ReadMyCode-App",
+              Accept: "application/vnd.github+json",
+            },
+          });
+          if (emailsRes.ok) {
+            const emails = await emailsRes.json();
+            const primary = emails.find((e) => e.primary && e.verified) || emails[0];
+            if (primary) ghUser.email = primary.email;
+          }
+        } catch (emailErr) {
+          logger.warn(`Failed to fetch GitHub user emails: ${emailErr.message}`);
+        }
+      }
+    } else if (inputUsername) {
+      const ghRes = await fetch(`https://api.github.com/users/${inputUsername}`, {
+        headers: {
+          "User-Agent": "ReadMyCode-App",
+          Accept: "application/vnd.github+json",
+        },
+      });
+      if (!ghRes.ok) {
+        return res.status(404).json({ message: `GitHub user '${inputUsername}' not found` });
+      }
+      ghUser = await ghRes.json();
+    } else {
+      return res.status(400).json({ message: "GitHub code, personal access token, or username is required" });
+    }
+
+    const githubId = String(ghUser.id);
+    const githubUsername = ghUser.login;
+    const email = ghUser.email ? ghUser.email.toLowerCase() : `${ghUser.login.toLowerCase()}@users.noreply.github.com`;
+    const name = ghUser.name || ghUser.login;
+    const avatar = ghUser.avatar_url || "";
+
+    let user;
+    if (isDbConnected()) {
+      user = await User.findOne({
+        $or: [{ githubId }, { email }, { githubUsername }],
+      });
+
+      if (user) {
+        user.githubId = githubId;
+        user.githubUsername = githubUsername;
+        user.avatar = avatar;
+        if (ghToken) user.githubToken = ghToken;
+        await user.save();
+      } else {
+        const randomPass = crypto.randomBytes(16).toString("hex");
+        user = await User.create({
+          name,
+          email,
+          password: randomPass,
+          githubId,
+          githubUsername,
+          avatar,
+          githubToken: ghToken || null,
+        });
+      }
+    } else {
+      user = memoryStore.findUserByEmail(email);
+      if (user) {
+        user.githubUsername = githubUsername;
+        user.avatar = avatar;
+        if (ghToken) user.githubToken = ghToken;
+        memoryStore.saveStore();
+      } else {
+        user = await memoryStore.createUser({
+          name,
+          email,
+          password: crypto.randomBytes(16).toString("hex"),
+        });
+        user.githubUsername = githubUsername;
+        user.avatar = avatar;
+        if (ghToken) user.githubToken = ghToken;
+        memoryStore.saveStore();
+      }
+    }
+
+    const token = signToken(user._id);
+
+    res.json({
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        avatar: user.avatar || avatar,
+        githubUsername: user.githubUsername,
+        hasGithubToken: Boolean(user.githubToken || ghToken),
+      },
+      message: `Welcome, ${user.name}! Connected to GitHub.`,
+    });
+  } catch (err) {
+    logger.error(`githubAuth failed: ${err.message}`);
+    next(err);
+  }
+}
+
+async function getUserGithubRepos(req, res, next) {
+  try {
+    const userDoc = isDbConnected()
+      ? await User.findById(req.user._id).select("+githubToken")
+      : await memoryStore.findUserById(req.user._id);
+
+    const token = req.query.token || userDoc?.githubToken || req.user?.githubToken || process.env.GITHUB_TOKEN;
+    const username = req.query.username || userDoc?.githubUsername || req.user?.githubUsername;
+
+    let apiUrl = "";
+    const headers = {
+      "User-Agent": "ReadMyCode-App",
+      Accept: "application/vnd.github+json",
+    };
+
+    if (token && !/^_+$/.test(token)) {
+      headers.Authorization = `Bearer ${token}`;
+      apiUrl = "https://api.github.com/user/repos?sort=updated&per_page=100&affiliation=owner,collaborator";
+    } else if (username) {
+      apiUrl = `https://api.github.com/users/${username}/repos?sort=updated&per_page=100`;
+    } else {
+      return res.status(400).json({
+        message: "No GitHub account connected. Please connect your GitHub account to import repositories.",
+        needConnect: true,
+      });
+    }
+
+    const ghRes = await fetch(apiUrl, { headers });
+    if (!ghRes.ok) {
+      const errText = await ghRes.text();
+      return res.status(ghRes.status).json({
+        message: `Failed to fetch repositories from GitHub (${ghRes.status}): ${errText}`,
+      });
+    }
+
+    const rawRepos = await ghRes.json();
+    const repos = rawRepos.map((r) => ({
+      id: r.id,
+      name: r.name,
+      fullName: r.full_name,
+      owner: r.owner?.login || username,
+      avatarUrl: r.owner?.avatar_url || "",
+      description: r.description || "No description provided",
+      url: r.html_url,
+      cloneUrl: r.clone_url,
+      isPrivate: Boolean(r.private),
+      defaultBranch: r.default_branch || "main",
+      language: r.language || "Codebase",
+      stars: r.stargazers_count || 0,
+      forks: r.forks_count || 0,
+      updatedAt: r.updated_at,
+      pushedAt: r.pushed_at,
+    }));
+
+    res.json({
+      repos,
+      total: repos.length,
+      username: username || (userDoc ? userDoc.githubUsername : ""),
+    });
+  } catch (err) {
+    logger.error(`getUserGithubRepos failed: ${err.message}`);
+    next(err);
+  }
+}
+
 module.exports = {
   register,
   login,
@@ -396,4 +606,6 @@ module.exports = {
   resetPassword,
   getSecurityQuestion,
   resetPasswordWithSecurityQuestion,
+  githubAuth,
+  getUserGithubRepos,
 };

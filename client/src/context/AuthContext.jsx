@@ -152,6 +152,23 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const loginWithGithub = async (data) => {
+    try {
+      const response = await authAPI.githubLogin(data);
+      const { token, user: loggedUser, message } = response.data;
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(loggedUser));
+      setUser(loggedUser);
+      setIsAuthenticated(true);
+      toast.success(message || `Welcome, ${loggedUser.name}!`);
+      return { success: true, user: loggedUser };
+    } catch (error) {
+      const message = error.response?.data?.message || 'GitHub connection failed';
+      toast.error(message);
+      return { success: false, message };
+    }
+  };
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -160,8 +177,10 @@ export function AuthProvider({ children }) {
       isAuthenticated,
       login,
       register,
+      loginWithGithub,
       logout,
       updateProfile,
+      checkAuth,
     }}>
       {children}
     </AuthContext.Provider>

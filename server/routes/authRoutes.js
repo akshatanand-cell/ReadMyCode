@@ -9,6 +9,8 @@ const {
   resetPassword,
   getSecurityQuestion,
   resetPasswordWithSecurityQuestion,
+  githubAuth,
+  getUserGithubRepos,
 } = require("../controllers/authController");
 const { protect } = require("../middleware/authMiddleware");
 
@@ -23,5 +25,7 @@ router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);
 router.post("/security-question", getSecurityQuestion);
 router.post("/reset-password-security", resetPasswordWithSecurityQuestion);
+router.post("/github", githubAuth);
+router.get("/github/repos", protect, getUserGithubRepos);
 
 module.exports = router;

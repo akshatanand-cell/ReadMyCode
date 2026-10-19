@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Github,
   Upload,
-  Link,
+  Link as LinkIcon,
   FileArchive,
   CheckCircle,
   AlertCircle,
@@ -13,14 +13,24 @@ import {
   Code2,
   Zap,
   Folder,
+  Search,
+  Lock,
+  Globe,
+  Star,
+  RefreshCw,
+  ExternalLink,
+  GitFork,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { useRepoAnalysis } from '@/hooks/useRepoAnalysis';
 import { useAuth } from '@/context/AuthContext';
-import { dashboardAPI } from '@/services/api';
+import { dashboardAPI, authAPI } from '@/services/api';
 import Button from '@/components/common/Button';
 import Card from '@/components/common/Card';
 import ProgressBar from '@/components/common/ProgressBar';
 import Badge from '@/components/common/Badge';
+import GithubConnectModal from '@/components/common/GithubConnectModal';
 import { cn } from '@/utils/helpers';
 import { MAX_FILE_SIZE, SUPPORTED_ARCHIVE_TYPES } from '@/utils/constants';
 
@@ -38,6 +48,46 @@ const Analyze = () => {
   const [customRepoName, setCustomRepoName] = useState('');
   const [isPrivate, setIsPrivate] = useState(false);
   const fileInputRef = useRef(null);
+
+  // Vercel-style GitHub Integration State
+  const [userGithubRepos, setUserGithubRepos] = useState([]);
+  const [loadingGithubRepos, setLoadingGithubRepos] = useState(false);
+  const [githubSearchQuery, setGithubSearchQuery] = useState('');
+  const [githubFilter, setGithubFilter] = useState('all'); // 'all' | 'public' | 'private'
+  const [isGithubModalOpen, setIsGithubModalOpen] = useState(false);
+  const [showManualUrl, setShowManualUrl] = useState(false);
+  const [importingRepoUrl, setImportingRepoUrl] = useState(null);
+
+  const fetchUserGithubRepos = async () => {
+    setLoadingGithubRepos(true);
+    try {
+      const res = await authAPI.getGithubRepos();
+      setUserGithubRepos(res.data?.repos || []);
+    } catch (err) {
+      console.warn('Could not fetch GitHub repos:', err.message);
+    } finally {
+      setLoadingGithubRepos(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user?.hasGithubToken || user?.githubUsername || localStorage.getItem('github_token')) {
+      fetchUserGithubRepos();
+    }
+  }, [user]);
+
+  const handleImportRepo = async (repoUrl) => {
+    setImportingRepoUrl(repoUrl);
+    try {
+      const result = await uploadFromGitHub(repoUrl);
+      const repoId = result?._id || result?.id || result?.repo?._id || result?.repo?.id;
+      if (repoId) navigate(`/repo/${repoId}`);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setImportingRepoUrl(null);
+    }
+  };
 
   const validateGitHubUrl = (url) => {
     const pattern = /^https:\/\/github\.com\/[\w-]+\/[\w.-]+(?:\.git)?\/?$/;
@@ -162,54 +212,290 @@ const Analyze = () => {
 
           <AnimatePresence mode="wait">
             {activeTab === 'github' ? (
-              <motion.form
+              <motion.div
                 key="github"
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 20 }}
-                onSubmit={handleGitHubSubmit}
-                className="space-y-4"
+                className="space-y-5"
               >
-                <div>
-                  <label className="block text-sm font-medium text-text-secondary mb-2">
-                    GitHub Repository URL
-                  </label>
-                  <div className="relative">
-                    <Link className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
-                    <input
-                      type="text"
-                      placeholder="https://github.com/username/repository"
-                      value={githubUrl}
-                      onChange={(e) => { setGithubUrl(e.target.value); setUrlError(''); }}
-                      className={cn(
-                        'w-full pl-10 pr-4 py-3 bg-background-secondary border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all',
-                        urlError ? 'border-error' : 'border-border'
-                      )}
-                    />
-                  </div>
-                  {urlError && (
-                    <div className="flex items-center gap-1.5 mt-2 text-error text-sm">
-                      <AlertCircle className="w-4 h-4" />
-                      <span>{urlError}</span>
-                    </div>
-                  )}
-                </div>
-
-                {isLoading && (
-                  <div className="py-4">
+                {/* Global Progress Bar when cloning/analyzing */}
+                {(isLoading || importingRepoUrl) && (
+                  <div className="py-4 px-4 bg-background-secondary rounded-xl border border-border">
                     <ProgressBar progress={progress} variant="gradient" />
                     <p className="text-center text-sm text-text-secondary mt-2 flex items-center justify-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Cloning repository and analyzing structure...
+                      <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                      Cloning repository and generating AI documentation...
                     </p>
                   </div>
                 )}
 
-                <Button type="submit" isLoading={isLoading} className="w-full">
-                  Analyze Repository
-                  <ArrowRight className="w-4 h-4" />
-                </Button>
-              </motion.form>
+                {/* Vercel-style Git Repository Import Section */}
+                {(user?.hasGithubToken || user?.githubUsername || userGithubRepos.length > 0) ? (
+                  <div className="space-y-4">
+                    {/* GitHub Connected Header Bar */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 bg-background-secondary border border-border rounded-xl">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-card border border-border flex items-center justify-center overflow-hidden">
+                          {user?.avatar ? (
+                            <img src={user.avatar} alt="GitHub" className="w-full h-full object-cover" />
+                          ) : (
+                            <Github className="w-5 h-5 text-text-primary" />
+                          )}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-semibold text-text-primary">
+                              {user?.name || 'GitHub User'}
+                            </span>
+                            <span className="px-2 py-0.5 rounded-full text-[11px] font-mono bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                              @{user?.githubUsername || 'connected'}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-text-muted">Import repositories from your linked GitHub account</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={fetchUserGithubRepos}
+                          disabled={loadingGithubRepos}
+                          className="p-1.5 text-text-secondary hover:text-text-primary bg-card border border-border rounded-lg text-xs font-medium flex items-center gap-1 transition"
+                          title="Refresh repositories"
+                        >
+                          <RefreshCw className={cn('w-3.5 h-3.5', loadingGithubRepos && 'animate-spin text-primary')} />
+                          <span className="hidden sm:inline">Refresh</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setIsGithubModalOpen(true)}
+                          className="px-2.5 py-1.5 text-xs text-text-secondary hover:text-text-primary bg-card border border-border rounded-lg font-medium transition"
+                        >
+                          Switch Account
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Search & Filter Bar */}
+                    <div className="flex flex-col sm:flex-row gap-2.5">
+                      <div className="relative flex-1">
+                        <Search className="w-4 h-4 text-text-muted absolute left-3 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="text"
+                          placeholder="Search repositories..."
+                          value={githubSearchQuery}
+                          onChange={(e) => setGithubSearchQuery(e.target.value)}
+                          className="w-full pl-9 pr-4 py-2 bg-background-secondary border border-border rounded-lg text-xs sm:text-sm text-text-primary placeholder-text-muted outline-none focus:ring-1 focus:ring-primary"
+                        />
+                      </div>
+                      <div className="flex items-center gap-1 bg-background-secondary p-1 rounded-lg border border-border self-start">
+                        {['all', 'public', 'private'].map((filterKey) => (
+                          <button
+                            key={filterKey}
+                            type="button"
+                            onClick={() => setGithubFilter(filterKey)}
+                            className={cn(
+                              'px-2.5 py-1 text-xs rounded-md capitalize font-medium transition',
+                              githubFilter === filterKey
+                                ? 'bg-card text-text-primary shadow-sm font-semibold'
+                                : 'text-text-muted hover:text-text-primary'
+                            )}
+                          >
+                            {filterKey}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Repositories List */}
+                    {loadingGithubRepos ? (
+                      <div className="py-12 flex flex-col items-center justify-center gap-2 text-text-muted text-xs">
+                        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                        <span>Loading repositories from GitHub...</span>
+                      </div>
+                    ) : userGithubRepos.length === 0 ? (
+                      <div className="py-10 text-center border border-dashed border-border rounded-xl p-6">
+                        <Github className="w-8 h-8 text-text-muted mx-auto mb-2" />
+                        <p className="text-sm font-medium text-text-primary">No repositories found</p>
+                        <p className="text-xs text-text-muted mt-1 max-w-sm mx-auto">
+                          Make sure your token has access to your repositories or click switch to connect with a personal access token.
+                        </p>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => setIsGithubModalOpen(true)}
+                          className="mt-3"
+                        >
+                          Connect with Token
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-2.5 max-h-[380px] overflow-y-auto pr-1 scrollbar-thin">
+                        {userGithubRepos
+                          .filter((repo) => {
+                            const q = githubSearchQuery.toLowerCase();
+                            const matchesQ =
+                              repo.name.toLowerCase().includes(q) ||
+                              (repo.description && repo.description.toLowerCase().includes(q));
+                            if (!matchesQ) return false;
+                            if (githubFilter === 'public') return !repo.isPrivate;
+                            if (githubFilter === 'private') return repo.isPrivate;
+                            return true;
+                          })
+                          .map((repo) => (
+                            <div
+                              key={repo.id}
+                              className="p-3.5 bg-background-secondary/60 hover:bg-background-secondary border border-border rounded-xl flex items-center justify-between gap-4 transition hover:border-primary/40 group"
+                            >
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  {repo.isPrivate ? (
+                                    <Lock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                                  ) : (
+                                    <Globe className="w-3.5 h-3.5 text-primary shrink-0" />
+                                  )}
+                                  <h4 className="text-sm font-bold text-text-primary truncate">
+                                    {repo.fullName || repo.name}
+                                  </h4>
+                                  <span
+                                    className={cn(
+                                      'px-2 py-0.5 rounded-full text-[10px] font-semibold border',
+                                      repo.isPrivate
+                                        ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                                        : 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                                    )}
+                                  >
+                                    {repo.isPrivate ? 'Private' : 'Public'}
+                                  </span>
+                                </div>
+                                <p className="text-xs text-text-muted truncate max-w-md">
+                                  {repo.description || 'No description provided'}
+                                </p>
+                                <div className="flex items-center gap-3 text-[11px] text-text-muted mt-2">
+                                  {repo.language && (
+                                    <span className="flex items-center gap-1.5">
+                                      <span className="w-2 h-2 rounded-full bg-primary" />
+                                      {repo.language}
+                                    </span>
+                                  )}
+                                  {repo.stars > 0 && (
+                                    <span className="flex items-center gap-1">
+                                      <Star className="w-3 h-3 text-amber-400" />
+                                      {repo.stars}
+                                    </span>
+                                  )}
+                                  <span>
+                                    Updated {new Date(repo.updatedAt).toLocaleDateString()}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <Button
+                                size="sm"
+                                variant="primary"
+                                isLoading={importingRepoUrl === repo.url}
+                                disabled={isLoading || Boolean(importingRepoUrl)}
+                                onClick={() => handleImportRepo(repo.url)}
+                                rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
+                                className="shrink-0 font-semibold"
+                              >
+                                {importingRepoUrl === repo.url ? 'Importing...' : 'Import'}
+                              </Button>
+                            </div>
+                          ))}
+                      </div>
+                    )}
+
+                    {/* Toggle Manual URL Form */}
+                    <div className="pt-2 text-center border-t border-border">
+                      <button
+                        type="button"
+                        onClick={() => setShowManualUrl(!showManualUrl)}
+                        className="text-xs text-primary hover:underline font-medium inline-flex items-center gap-1"
+                      >
+                        {showManualUrl ? (
+                          <>
+                            <ChevronUp className="w-3.5 h-3.5" />
+                            Hide manual repository URL input
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDown className="w-3.5 h-3.5" />
+                            Looking for a public open-source repository? Paste URL manually
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  /* Not Connected State - Vercel-Style Hero Banner */
+                  <div className="p-6 bg-gradient-to-br from-background-secondary via-card to-background-secondary border border-border rounded-2xl text-center space-y-4">
+                    <div className="w-14 h-14 bg-background-secondary border border-border rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-black/10">
+                      <Github className="w-8 h-8 text-text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-text-primary">Import Git Repository</h3>
+                      <p className="text-xs text-text-secondary max-w-md mx-auto mt-1 leading-relaxed">
+                        Connect your GitHub account to browse your public and private repositories and import them directly with 1 click, just like Vercel.
+                      </p>
+                    </div>
+                    <div>
+                      <Button
+                        type="button"
+                        onClick={() => setIsGithubModalOpen(true)}
+                        className="px-6 py-2.5 font-semibold text-sm shadow-md"
+                        leftIcon={<Github className="w-4 h-4" />}
+                      >
+                        Connect to GitHub
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Manual URL Input Form (if toggled or not connected) */}
+                {(!user?.hasGithubToken && !user?.githubUsername || showManualUrl) && (
+                  <form onSubmit={handleGitHubSubmit} className="space-y-3 pt-2">
+                    <div>
+                      <label className="block text-xs font-semibold text-text-secondary mb-1.5">
+                        Or Paste Public GitHub Repository URL
+                      </label>
+                      <div className="relative">
+                        <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
+                        <input
+                          type="text"
+                          placeholder="https://github.com/username/repository"
+                          value={githubUrl}
+                          onChange={(e) => {
+                            setGithubUrl(e.target.value);
+                            setUrlError('');
+                          }}
+                          className={cn(
+                            'w-full pl-10 pr-4 py-2.5 bg-background-secondary border rounded-xl text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all font-mono',
+                            urlError ? 'border-error' : 'border-border'
+                          )}
+                        />
+                      </div>
+                      {urlError && (
+                        <div className="flex items-center gap-1.5 mt-2 text-error text-xs">
+                          <AlertCircle className="w-3.5 h-3.5" />
+                          <span>{urlError}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <Button
+                      type="submit"
+                      isLoading={isLoading}
+                      disabled={!githubUrl.trim()}
+                      className="w-full text-sm font-semibold"
+                      rightIcon={<ArrowRight className="w-4 h-4" />}
+                    >
+                      Analyze Public Repository
+                    </Button>
+                  </form>
+                )}
+              </motion.div>
             ) : (
               <motion.form
                 key="zip"
@@ -398,6 +684,12 @@ const Analyze = () => {
             </div>
           </div>
         )}
+        {/* GitHub Connect Modal */}
+        <GithubConnectModal
+          isOpen={isGithubModalOpen}
+          onClose={() => setIsGithubModalOpen(false)}
+          onSuccess={() => fetchUserGithubRepos()}
+        />
       </div>
     </div>
   );
