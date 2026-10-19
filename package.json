@@ -4,11 +4,16 @@
   "description": "ReadMyCode AI Documentation Generator",
   "main": "server/server.js",
   "scripts": {
-    "build": "cd server && npm install --production && cd ../client && npm install && npm run build",
-    "start": "node server/server.js",
-    "dev": "cd client && npm run dev"
+    "dev": "concurrently -n \"SERVER,CLIENT\" -c \"cyan,magenta\" \"npm --prefix server run dev\" \"npm --prefix client run dev\"",
+    "dev:server": "npm --prefix server run dev",
+    "dev:client": "npm --prefix client run dev",
+    "build": "cd server && npm install && cd ../client && npm install && npm run build",
+    "start": "node server/server.js"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "concurrently": "^10.0.6"
+  }
 }
