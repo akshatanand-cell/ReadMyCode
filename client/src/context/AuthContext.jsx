@@ -37,19 +37,21 @@ export function AuthProvider({ children }) {
       }
       const response = await authAPI.getProfile();
       const userData = response.data?.user || response.data;
-      setUser(userData);
-      localStorage.setItem('user', JSON.stringify(userData));
-      setIsAuthenticated(true);
-    } catch (error) {
-      if (!error.response || error.code === 'ERR_NETWORK') {
-        const offlineUser = user || { id: 'demo_user', name: 'Developer', email: 'developer@example.com' };
-        setUser(offlineUser);
+      if (userData && userData.id !== 'demo_guest') {
+        setUser(userData);
+        localStorage.setItem('user', JSON.stringify(userData));
         setIsAuthenticated(true);
-      } else {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        setUser(null);
-        setIsAuthenticated(false);
+      }
+    } catch (error) {
+      // Preserve saved login from localStorage so user is never logged out unexpectedly
+      const savedUser = localStorage.getItem('user');
+      if (savedUser) {
+        try {
+          setUser(JSON.parse(savedUser));
+          setIsAuthenticated(true);
+        } catch {
+          // ignore
+        }
       }
     } finally {
       setIsLoading(false);

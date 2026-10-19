@@ -55,6 +55,7 @@ export const repoAPI = {
   uploadZip: (formData) => api.post('/repos/upload', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   }),
+  pushToGithub: (id, data) => api.post(`/repos/${id}/push-to-github`, data),
   getReadme: (repoId) => api.get(`/readme/${repoId}`),
   getApiDocs: (repoId) => api.get(`/docs/${repoId}`),
   getFlowchart: (repoId) => api.get(`/diagrams/flowchart/${repoId}`),

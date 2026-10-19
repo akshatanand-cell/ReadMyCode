@@ -37,7 +37,13 @@ async function register(req, res, next) {
 
     res.status(201).json({
       token,
-      user: { id: user._id, name: user.name, email: user.email },
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        githubUsername: user.githubUsername || null,
+        hasGithubToken: Boolean(user.githubToken),
+      },
     });
   } catch (err) {
     next(err);
@@ -77,14 +83,31 @@ async function login(req, res, next) {
     }
 
     const token = signToken(user._id);
-    res.json({ token, user: { id: user._id, name: user.name, email: user.email } });
+    res.json({
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        githubUsername: user.githubUsername || null,
+        hasGithubToken: Boolean(user.githubToken),
+      },
+    });
   } catch (err) {
     next(err);
   }
 }
 
 async function getMe(req, res) {
-  res.json({ user: { id: req.user._id, name: req.user.name, email: req.user.email } });
+  res.json({
+    user: {
+      id: req.user._id,
+      name: req.user.name,
+      email: req.user.email,
+      githubUsername: req.user.githubUsername || null,
+      hasGithubToken: Boolean(req.user.githubToken),
+    },
+  });
 }
 
 /**
@@ -100,11 +123,11 @@ async function logout(req, res) {
 
 async function updateProfile(req, res, next) {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, githubToken, githubUsername } = req.body;
     let user;
 
     if (isDbConnected()) {
-      user = await User.findById(req.user._id).select("+password");
+      user = await User.findById(req.user._id).select("+password +githubToken");
       if (!user) return res.status(404).json({ message: "User not found" });
 
       if (email && email !== user.email) {
@@ -115,18 +138,37 @@ async function updateProfile(req, res, next) {
 
       if (name) user.name = name;
       if (password) user.password = password; // pre-save hook re-hashes
+      if (githubToken !== undefined) user.githubToken = githubToken;
+      if (githubUsername !== undefined) user.githubUsername = githubUsername;
       await user.save();
     } else {
       user = await memoryStore.findUserById(req.user._id);
       if (!user) {
-        user = { _id: req.user._id, name: name || req.user.name, email: email || req.user.email };
+        user = {
+          _id: req.user._id,
+          name: name || req.user.name,
+          email: email || req.user.email,
+          githubToken: githubToken || null,
+          githubUsername: githubUsername || null,
+        };
       } else {
         if (name) user.name = name;
         if (email) user.email = email;
+        if (githubToken !== undefined) user.githubToken = githubToken;
+        if (githubUsername !== undefined) user.githubUsername = githubUsername;
       }
+      memoryStore.saveStore();
     }
 
-    res.json({ user: { id: user._id, name: user.name, email: user.email } });
+    res.json({
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        githubUsername: user.githubUsername || null,
+        hasGithubToken: Boolean(user.githubToken),
+      },
+    });
   } catch (err) {
     next(err);
   }

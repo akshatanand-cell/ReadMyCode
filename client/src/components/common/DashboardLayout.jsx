@@ -127,7 +127,7 @@ const DashboardLayout = () => {
                       <span className="hidden sm:inline">{isCopied ? 'Copied' : 'Copy URL'}</span>
                     </button>
 
-                    {(currentRepo.repoUrl || currentRepo.githubUrl) && (
+                    {((currentRepo.repoUrl || currentRepo.githubUrl)?.startsWith('http')) ? (
                       <a
                         href={currentRepo.repoUrl || currentRepo.githubUrl}
                         target="_blank"
@@ -138,6 +138,15 @@ const DashboardLayout = () => {
                         <ExternalLink className="w-3.5 h-3.5 text-primary" />
                         <span className="hidden sm:inline">GitHub</span>
                       </a>
+                    ) : (
+                      <button
+                        onClick={() => navigate(`/repo/${id}`)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary/30 bg-primary/10 hover:bg-primary/20 text-primary text-xs font-medium transition-all shadow-sm"
+                        title="Export to GitHub"
+                      >
+                        <GitBranch className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Push to GitHub</span>
+                      </button>
                     )}
                   </div>
                 </div>

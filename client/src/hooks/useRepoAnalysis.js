@@ -26,16 +26,25 @@ export function useRepoAnalysis() {
     }
   }, []);
 
-  const uploadFromZip = useCallback(async (file) => {
+  const uploadFromZip = useCallback(async (file, options = {}) => {
     setIsLoading(true);
     setProgress(0);
     setError(null);
     try {
       const formData = new FormData();
       formData.append('file', file);
+      if (options.pushToGithub) formData.append('pushToGithub', 'true');
+      if (options.githubToken) formData.append('githubToken', options.githubToken);
+      if (options.customRepoName) formData.append('customRepoName', options.customRepoName);
+      if (options.isPrivate) formData.append('isPrivate', 'true');
+
       const response = await repoAPI.uploadZip(formData);
       setProgress(100);
-      toast.success('Repository uploaded successfully');
+      if (response.data?.github?.htmlUrl) {
+        toast.success(`Pushed to GitHub: ${response.data.github.htmlUrl}`, { duration: 6000 });
+      } else {
+        toast.success('Repository uploaded successfully');
+      }
       return response.data?.repo || response.data;
     } catch (err) {
       const message = err.response?.data?.message || 'Failed to upload repository';

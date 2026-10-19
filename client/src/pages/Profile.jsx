@@ -19,7 +19,12 @@ export default function Profile() {
     avatar: '',
     bio: ''
   });
+  const [githubData, setGithubData] = useState({
+    githubToken: '',
+    githubUsername: ''
+  });
   const [loading, setLoading] = useState(false);
+  const [savingGithub, setSavingGithub] = useState(false);
   const [activeTab, setActiveTab] = useState('overview'); // overview | repos | settings
 
   useEffect(() => {
@@ -29,6 +34,10 @@ export default function Profile() {
         email: user.email || '',
         avatar: user.avatar || '',
         bio: user.bio || ''
+      });
+      setGithubData({
+        githubToken: '',
+        githubUsername: user.githubUsername || ''
       });
       fetchUserRepos();
     }
@@ -53,6 +62,49 @@ export default function Profile() {
     }
   };
 
+  const handleSaveGithub = async (e) => {
+    e?.preventDefault();
+    if (!githubData.githubToken && !user?.hasGithubToken) {
+      toast.error('Please enter a GitHub Personal Access Token');
+      return;
+    }
+    setSavingGithub(true);
+    try {
+      const payload = {
+        githubUsername: githubData.githubUsername
+      };
+      if (githubData.githubToken) {
+        payload.githubToken = githubData.githubToken;
+      }
+      const res = await api.put('/auth/profile', payload);
+      updateUser(res.data.user);
+      setGithubData(prev => ({ ...prev, githubToken: '' }));
+      toast.success('GitHub connection saved successfully!');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to update GitHub credentials');
+    } finally {
+      setSavingGithub(false);
+    }
+  };
+
+  const handleDisconnectGithub = async () => {
+    if (!window.confirm('Are you sure you want to disconnect your GitHub token?')) return;
+    setSavingGithub(true);
+    try {
+      const res = await api.put('/auth/profile', {
+        githubToken: '',
+        githubUsername: ''
+      });
+      updateUser(res.data.user);
+      setGithubData({ githubToken: '', githubUsername: '' });
+      toast.success('GitHub token disconnected');
+    } catch (_err) {
+      toast.error('Failed to disconnect GitHub');
+    } finally {
+      setSavingGithub(false);
+    }
+  };
+
   const handleDeleteAccount = async () => {
     if (!window.confirm('Are you sure? This will permanently delete your account and all data.')) return;
     try {
@@ -60,7 +112,7 @@ export default function Profile() {
       toast.success('Account deleted');
       logout();
       navigate('/');
-    } catch (err) {
+    } catch (_err) {
       toast.error('Failed to delete account');
     }
   };
@@ -70,7 +122,7 @@ export default function Profile() {
     try {
       await deleteRepo(repoId);
       toast.success('Repository deleted');
-    } catch (err) {
+    } catch (_err) {
       toast.error('Failed to delete repository');
     }
   };
@@ -86,16 +138,16 @@ export default function Profile() {
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
       {/* Profile Header */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 mb-6">
+      <div className="bg-card rounded-2xl shadow-sm border border-border p-8 mb-6 transition-colors">
         <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
           <div className="relative">
             <img
-              src={formData.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(formData.name)}&background=6366f1&color=fff&size=128`}
+              src={formData.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(formData.name || 'User')}&background=6366f1&color=fff&size=128`}
               alt={formData.name}
-              className="w-24 h-24 rounded-full object-cover border-4 border-indigo-50"
+              className="w-24 h-24 rounded-full object-cover border-4 border-primary/20"
             />
             {isEditing && (
-              <label className="absolute bottom-0 right-0 bg-indigo-600 text-white p-2 rounded-full cursor-pointer hover:bg-indigo-700 transition">
+              <label className="absolute bottom-0 right-0 bg-primary text-white p-2 rounded-full cursor-pointer hover:bg-primary-hover transition">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -106,11 +158,21 @@ export default function Profile() {
           </div>
           
           <div className="flex-1">
-            <h1 className="text-2xl font-bold text-gray-900">{user.name}</h1>
-            <p className="text-gray-500">{user.email}</p>
-            {formData.bio && <p className="text-gray-600 mt-2 max-w-lg">{formData.bio}</p>}
-            <div className="flex gap-4 mt-3 text-sm text-gray-500">
-              <span>Member since {new Date(user.createdAt).toLocaleDateString()}</span>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold text-text-primary">{user.name}</h1>
+              {user.hasGithubToken && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
+                  </svg>
+                  GitHub Linked
+                </span>
+              )}
+            </div>
+            <p className="text-text-secondary">{user.email}</p>
+            {formData.bio && <p className="text-text-muted mt-2 max-w-lg">{formData.bio}</p>}
+            <div className="flex gap-4 mt-3 text-sm text-text-muted">
+              <span>Member since {new Date(user.createdAt || Date.now()).toLocaleDateString()}</span>
               <span>•</span>
               <span>{stats.totalRepos} repositories analyzed</span>
             </div>
@@ -127,15 +189,15 @@ export default function Profile() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-gray-100 p-1 rounded-lg mb-6 w-fit">
+      <div className="flex gap-1 bg-background-secondary p-1 rounded-xl mb-6 w-fit border border-border">
         {['overview', 'repos', 'settings'].map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition capitalize ${
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition capitalize ${
               activeTab === tab
-                ? 'bg-white text-indigo-600 shadow-sm'
-                : 'text-gray-600 hover:text-gray-900'
+                ? 'bg-card text-primary shadow-sm border border-border/50'
+                : 'text-text-secondary hover:text-text-primary'
             }`}
           >
             {tab}
@@ -146,43 +208,43 @@ export default function Profile() {
       {/* Tab Content */}
       {activeTab === 'overview' && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-            <div className="text-3xl font-bold text-indigo-600">{stats.totalRepos}</div>
-            <div className="text-gray-500 text-sm mt-1">Repositories</div>
+          <div className="bg-card rounded-xl p-6 shadow-sm border border-border">
+            <div className="text-3xl font-bold text-primary">{stats.totalRepos}</div>
+            <div className="text-text-muted text-sm mt-1">Repositories</div>
           </div>
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-            <div className="text-3xl font-bold text-emerald-600">{stats.totalAnalyses}</div>
-            <div className="text-gray-500 text-sm mt-1">Total Analyses</div>
+          <div className="bg-card rounded-xl p-6 shadow-sm border border-border">
+            <div className="text-3xl font-bold text-emerald-500">{stats.totalAnalyses}</div>
+            <div className="text-text-muted text-sm mt-1">Total Analyses</div>
           </div>
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-            <div className="text-3xl font-bold text-amber-600">{stats.lastActive}</div>
-            <div className="text-gray-500 text-sm mt-1">Last Active</div>
+          <div className="bg-card rounded-xl p-6 shadow-sm border border-border">
+            <div className="text-3xl font-bold text-amber-500">{stats.lastActive}</div>
+            <div className="text-text-muted text-sm mt-1">Last Active</div>
           </div>
 
-          <div className="md:col-span-3 bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-            <h3 className="font-semibold text-gray-900 mb-4">Recent Activity</h3>
+          <div className="md:col-span-3 bg-card rounded-xl p-6 shadow-sm border border-border">
+            <h3 className="font-semibold text-text-primary mb-4">Recent Activity</h3>
             {repos.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">No repositories analyzed yet.</p>
+              <p className="text-text-muted text-center py-8">No repositories analyzed yet.</p>
             ) : (
               <div className="space-y-3">
                 {repos.slice(0, 5).map(repo => (
                   <div
                     key={repo._id}
                     onClick={() => navigate(`/repo/${repo._id}`)}
-                    className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition"
+                    className="flex items-center justify-between p-3 rounded-lg hover:bg-background-secondary cursor-pointer transition border border-transparent hover:border-border"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
-                        <svg className="w-5 h-5 text-indigo-600" fill="currentColor" viewBox="0 0 24 24">
+                      <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                        <svg className="w-5 h-5 text-primary" fill="currentColor" viewBox="0 0 24 24">
                           <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
                         </svg>
                       </div>
                       <div>
-                        <div className="font-medium text-gray-900">{repo.name}</div>
-                        <div className="text-sm text-gray-500">{repo.description || 'No description'}</div>
+                        <div className="font-medium text-text-primary">{repo.name}</div>
+                        <div className="text-sm text-text-muted">{repo.description || 'No description'}</div>
                       </div>
                     </div>
-                    <span className="text-xs text-gray-400">{new Date(repo.updatedAt).toLocaleDateString()}</span>
+                    <span className="text-xs text-text-muted">{new Date(repo.updatedAt).toLocaleDateString()}</span>
                   </div>
                 ))}
               </div>
@@ -192,38 +254,38 @@ export default function Profile() {
       )}
 
       {activeTab === 'repos' && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="bg-card rounded-xl shadow-sm border border-border overflow-hidden">
           {repos.length === 0 ? (
             <div className="text-center py-16">
-              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-16 h-16 bg-background-secondary rounded-full flex items-center justify-center mx-auto mb-4 border border-border">
+                <svg className="w-8 h-8 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                 </svg>
               </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No repositories yet</h3>
-              <p className="text-gray-500 mb-4">Start by analyzing your first repository</p>
+              <h3 className="text-lg font-medium text-text-primary mb-2">No repositories yet</h3>
+              <p className="text-text-muted mb-4">Start by analyzing your first repository</p>
               <Button onClick={() => navigate('/analyze')}>Analyze Repository</Button>
             </div>
           ) : (
-            <div className="divide-y divide-gray-100">
+            <div className="divide-y divide-border">
               {repos.map(repo => (
-                <div key={repo._id} className="p-6 flex items-center justify-between hover:bg-gray-50 transition">
+                <div key={repo._id} className="p-6 flex items-center justify-between hover:bg-background-secondary/50 transition">
                   <div
                     className="flex-1 cursor-pointer"
                     onClick={() => navigate(`/repo/${repo._id}`)}
                   >
                     <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-gray-900">{repo.name}</h3>
+                      <h3 className="font-semibold text-text-primary">{repo.name}</h3>
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                        repo.status === 'completed' ? 'bg-emerald-100 text-emerald-700' :
-                        repo.status === 'processing' ? 'bg-amber-100 text-amber-700' :
-                        'bg-gray-100 text-gray-700'
+                        repo.status === 'completed' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' :
+                        repo.status === 'processing' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20' :
+                        'bg-background-secondary text-text-muted border border-border'
                       }`}>
                         {repo.status}
                       </span>
                     </div>
-                    <p className="text-sm text-gray-500 mt-1">{repo.url}</p>
-                    <div className="flex gap-4 mt-2 text-xs text-gray-400">
+                    <p className="text-sm text-text-muted mt-1">{repo.url}</p>
+                    <div className="flex gap-4 mt-2 text-xs text-text-muted">
                       <span>Analyzed {new Date(repo.createdAt).toLocaleDateString()}</span>
                       <span>•</span>
                       <span>{repo.language || 'Unknown language'}</span>
@@ -240,7 +302,7 @@ export default function Profile() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      className="text-error hover:bg-error/10"
                       onClick={() => handleRepoDelete(repo._id)}
                     >
                       Delete
@@ -254,55 +316,137 @@ export default function Profile() {
       )}
 
       {activeTab === 'settings' && (
-        <div className="max-w-2xl">
+        <div className="max-w-2xl space-y-6">
+          {/* GitHub Integration Card */}
+          <div className="bg-card rounded-xl shadow-sm border border-border p-6">
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-text-primary/5 flex items-center justify-center text-text-primary border border-border">
+                  <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-text-primary text-base">GitHub Integration</h3>
+                  <p className="text-xs text-text-muted">Link your GitHub token to automatically push ZIP uploads and export project code.</p>
+                </div>
+              </div>
+              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
+                user.hasGithubToken
+                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                  : 'bg-background-secondary text-text-muted border border-border'
+              }`}>
+                {user.hasGithubToken ? 'Connected' : 'Not Connected'}
+              </span>
+            </div>
+
+            <form onSubmit={handleSaveGithub} className="space-y-4 pt-2">
+              <div>
+                <label className="block text-xs font-medium text-text-secondary mb-1">
+                  GitHub Personal Access Token (classic or fine-grained with <code className="text-primary font-mono">repo</code> scope)
+                </label>
+                <input
+                  type="password"
+                  placeholder={user.hasGithubToken ? '••••••••••••••••••••••••••••••••' : 'ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxx'}
+                  value={githubData.githubToken}
+                  onChange={(e) => setGithubData(prev => ({ ...prev, githubToken: e.target.value }))}
+                  className="w-full px-3 py-2 bg-background-secondary border border-border rounded-lg text-sm text-text-primary placeholder:text-text-muted focus:ring-2 focus:ring-primary focus:border-transparent outline-none font-mono"
+                />
+                <div className="flex items-center justify-between mt-1 text-xs text-text-muted">
+                  <span>Tokens are stored securely and used only for repository actions you initiate.</span>
+                  <a
+                    href="https://github.com/settings/tokens/new?scopes=repo&description=ReadMyCode%20Integration"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline font-medium shrink-0 ml-2"
+                  >
+                    Generate token &rarr;
+                  </a>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-text-secondary mb-1">
+                  GitHub Username (Optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. torvalds"
+                  value={githubData.githubUsername}
+                  onChange={(e) => setGithubData(prev => ({ ...prev, githubUsername: e.target.value }))}
+                  className="w-full px-3 py-2 bg-background-secondary border border-border rounded-lg text-sm text-text-primary placeholder:text-text-muted focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+                />
+              </div>
+
+              <div className="flex items-center gap-3 pt-2">
+                <Button type="submit" loading={savingGithub} size="sm">
+                  {user.hasGithubToken ? 'Update Token' : 'Save Connection'}
+                </Button>
+                {user.hasGithubToken && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="text-error hover:bg-error/10"
+                    onClick={handleDisconnectGithub}
+                    disabled={savingGithub}
+                  >
+                    Disconnect
+                  </Button>
+                )}
+              </div>
+            </form>
+          </div>
+
+          {/* User Details Settings */}
           {isEditing ? (
-            <form onSubmit={handleUpdateProfile} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
-              <h3 className="font-semibold text-gray-900 mb-4">Edit Profile</h3>
+            <form onSubmit={handleUpdateProfile} className="bg-card rounded-xl shadow-sm border border-border p-6 space-y-4">
+              <h3 className="font-semibold text-text-primary mb-4">Edit Profile</h3>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Display Name</label>
+                <label className="block text-sm font-medium text-text-secondary mb-1">Display Name</label>
                 <input
                   type="text"
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="w-full px-4 py-2 bg-background-secondary border border-border rounded-lg text-text-primary focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <label className="block text-sm font-medium text-text-secondary mb-1">Email</label>
                 <input
                   type="email"
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="w-full px-4 py-2 bg-background-secondary border border-border rounded-lg text-text-primary focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Bio</label>
+                <label className="block text-sm font-medium text-text-secondary mb-1">Bio</label>
                 <textarea
                   name="bio"
                   value={formData.bio}
                   onChange={handleChange}
                   rows={3}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+                  className="w-full px-4 py-2 bg-background-secondary border border-border rounded-lg text-text-primary focus:ring-2 focus:ring-primary focus:border-transparent outline-none resize-none"
                   placeholder="Tell us about yourself..."
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Avatar URL</label>
+                <label className="block text-sm font-medium text-text-secondary mb-1">Avatar URL</label>
                 <input
                   type="url"
                   name="avatar"
                   value={formData.avatar}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="w-full px-4 py-2 bg-background-secondary border border-border rounded-lg text-text-primary focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
                   placeholder="https://..."
                 />
               </div>
@@ -315,28 +459,28 @@ export default function Profile() {
               </div>
             </form>
           ) : (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-              <h3 className="font-semibold text-gray-900 mb-4">Account Settings</h3>
+            <div className="bg-card rounded-xl shadow-sm border border-border p-6">
+              <h3 className="font-semibold text-text-primary mb-4">Account Preferences</h3>
               <div className="space-y-4">
-                <div className="flex justify-between items-center py-3 border-b border-gray-100">
+                <div className="flex justify-between items-center py-3 border-b border-border">
                   <div>
-                    <div className="font-medium text-gray-900">Email Notifications</div>
-                    <div className="text-sm text-gray-500">Receive updates about your analyses</div>
+                    <div className="font-medium text-text-primary">Email Notifications</div>
+                    <div className="text-sm text-text-muted">Receive updates about your repository analyses</div>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input type="checkbox" className="sr-only peer" defaultChecked />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                    <div className="w-11 h-6 bg-border peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                   </label>
                 </div>
 
-                <div className="flex justify-between items-center py-3 border-b border-gray-100">
+                <div className="flex justify-between items-center py-3 border-b border-border">
                   <div>
-                    <div className="font-medium text-gray-900">Public Profile</div>
-                    <div className="text-sm text-gray-500">Make your profile visible to others</div>
+                    <div className="font-medium text-text-primary">Persistent Cloud Sync</div>
+                    <div className="text-sm text-text-muted">Save all analyses and session tokens automatically</div>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" className="sr-only peer" />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                    <input type="checkbox" className="sr-only peer" defaultChecked disabled />
+                    <div className="w-11 h-6 bg-primary peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
                   </label>
                 </div>
 

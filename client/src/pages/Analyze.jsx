@@ -15,6 +15,7 @@ import {
   Folder,
 } from 'lucide-react';
 import { useRepoAnalysis } from '@/hooks/useRepoAnalysis';
+import { useAuth } from '@/context/AuthContext';
 import Button from '@/components/common/Button';
 import Card from '@/components/common/Card';
 import ProgressBar from '@/components/common/ProgressBar';
@@ -24,12 +25,17 @@ import { MAX_FILE_SIZE, SUPPORTED_ARCHIVE_TYPES } from '@/utils/constants';
 
 const Analyze = () => {
   const navigate = useNavigate();
-  const { uploadFromGitHub, uploadFromZip, isLoading, progress, error } = useRepoAnalysis();
+  const { user } = useAuth();
+  const { uploadFromGitHub, uploadFromZip, isLoading, progress } = useRepoAnalysis();
   const [activeTab, setActiveTab] = useState('github');
   const [githubUrl, setGithubUrl] = useState('');
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [urlError, setUrlError] = useState('');
+  const [pushToGithub, setPushToGithub] = useState(false);
+  const [githubToken, setGithubToken] = useState(() => localStorage.getItem('github_token') || '');
+  const [customRepoName, setCustomRepoName] = useState('');
+  const [isPrivate, setIsPrivate] = useState(false);
   const fileInputRef = useRef(null);
 
   const validateGitHubUrl = (url) => {
@@ -68,8 +74,8 @@ const Analyze = () => {
       setSelectedFile(null);
       return;
     }
-    const ext = file.name.slice(file.name.lastIndexOf('.'));
-    if (!SUPPORTED_ARCHIVE_TYPES.some(t => file.name.endsWith(t)) && !file.name.endsWith('.zip')) {
+    const ext = file.name.slice(file.name.lastIndexOf('.')).toLowerCase();
+    if (!SUPPORTED_ARCHIVE_TYPES.some(t => ext === t) && ext !== '.zip') {
       setSelectedFile(null);
       return;
     }
@@ -79,7 +85,15 @@ const Analyze = () => {
   const handleZipSubmit = async (e) => {
     e.preventDefault();
     if (!selectedFile) return;
-    const result = await uploadFromZip(selectedFile);
+    if (githubToken) {
+      localStorage.setItem('github_token', githubToken);
+    }
+    const result = await uploadFromZip(selectedFile, {
+      pushToGithub,
+      githubToken,
+      customRepoName: customRepoName || selectedFile.name.replace(/\.zip$/i, ''),
+      isPrivate,
+    });
     const repoId = result?._id || result?.id || result?.repo?._id || result?.repo?.id;
     if (repoId) navigate(`/repo/${repoId}`);
   };
@@ -245,8 +259,89 @@ const Analyze = () => {
                   </div>
                 )}
 
+                {/* GitHub Auto-Push Integration */}
+                <div className="p-4 bg-background-secondary rounded-xl border border-border space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={pushToGithub}
+                        onChange={(e) => setPushToGithub(e.target.checked)}
+                        className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                      />
+                      <span className="text-sm font-semibold text-text-primary flex items-center gap-1.5">
+                        <Github className="w-4 h-4 text-primary" />
+                        Automatically push to GitHub after analysis
+                      </span>
+                    </label>
+                  </div>
+
+                  {pushToGithub && (
+                    <div className="space-y-3 pt-2 border-t border-border/60">
+                      {user?.hasGithubToken && (
+                        <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg flex items-center justify-between text-xs text-emerald-600 dark:text-emerald-400">
+                          <span className="flex items-center gap-1.5 font-medium">
+                            <CheckCircle className="w-3.5 h-3.5" />
+                            Using linked GitHub account ({user.githubUsername || 'Saved Token'})
+                          </span>
+                          <span className="text-[11px] text-text-muted">Override below if needed</span>
+                        </div>
+                      )}
+                      <div>
+                        <label className="block text-xs font-medium text-text-secondary mb-1">
+                          GitHub Personal Access Token (repo scope)
+                        </label>
+                        <input
+                          type="password"
+                          placeholder={user?.hasGithubToken ? '•••••••••••••••••••• (using saved token)' : 'ghp_xxxxxxxxxxxxxxxxxxxx'}
+                          value={githubToken}
+                          onChange={(e) => setGithubToken(e.target.value)}
+                          className="w-full px-3 py-2 text-xs font-mono bg-card border border-border rounded-lg text-text-primary focus:outline-none focus:border-primary"
+                        />
+                        <p className="text-[11px] text-text-muted mt-1">
+                          Need a token?{' '}
+                          <a
+                            href="https://github.com/settings/tokens/new?scopes=repo&description=ReadMyCode"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary hover:underline font-semibold"
+                          >
+                            Create one on GitHub in 30s
+                          </a>
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-text-secondary mb-1">
+                            Repository Name
+                          </label>
+                          <input
+                            type="text"
+                            placeholder={selectedFile ? selectedFile.name.replace(/\.zip$/i, '') : 'my-awesome-repo'}
+                            value={customRepoName}
+                            onChange={(e) => setCustomRepoName(e.target.value)}
+                            className="w-full px-3 py-2 text-xs bg-card border border-border rounded-lg text-text-primary focus:outline-none focus:border-primary"
+                          />
+                        </div>
+                        <div className="flex items-center pt-4">
+                          <label className="flex items-center gap-2 cursor-pointer select-none">
+                            <input
+                              type="checkbox"
+                              checked={isPrivate}
+                              onChange={(e) => setIsPrivate(e.target.checked)}
+                              className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                            />
+                            <span className="text-xs text-text-secondary">Make repository private</span>
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <Button type="submit" isLoading={isLoading} disabled={!selectedFile} className="w-full">
-                  Upload & Analyze
+                  {pushToGithub ? 'Upload, Analyze & Push to GitHub' : 'Upload & Analyze'}
                   <ArrowRight className="w-4 h-4" />
                 </Button>
               </motion.form>
