@@ -45,7 +45,6 @@ export default function ContributionHeatmap({ repos = [], className = '' }) {
     let weekIndex = 0;
 
     let total = 0;
-    let streak = 0;
     let maxS = 0;
     let tempStreak = 0;
 
@@ -126,7 +125,7 @@ export default function ContributionHeatmap({ repos = [], className = '' }) {
       generatedWeeks.push(currentWeek);
     }
 
-    streak = tempStreak;
+    const streak = tempStreak;
 
     return {
       weeks: generatedWeeks,

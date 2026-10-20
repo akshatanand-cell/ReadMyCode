@@ -4,33 +4,33 @@
 
 @layer base {
   :root {
-    /* GitHub Light / Primer Palette (R G B space-separated for Tailwind alpha support) */
-    --color-bg: 246 248 250;
+    /* Apple Warm Neutral & Restrained Palette (R G B space-separated for Tailwind alpha support) */
+    --color-bg: 245 245 247;
     --color-bg-subtle: 255 255 255;
     --color-card: 255 255 255;
-    --color-border: 208 215 222;
-    --color-border-light: 225 228 232;
-    --color-text-primary: 31 35 40;
-    --color-text-secondary: 87 96 106;
-    --color-text-muted: 110 119 129;
-    --color-primary: 9 105 218;
-    --color-primary-hover: 8 92 192;
-    --color-accent: 130 80 223;
+    --color-border: 210 210 215;
+    --color-border-light: 229 229 234;
+    --color-text-primary: 29 29 31;
+    --color-text-secondary: 110 110 115;
+    --color-text-muted: 134 134 139;
+    --color-primary: 0 113 227;
+    --color-primary-hover: 0 119 237;
+    --color-accent: 0 113 227;
   }
 
   html.dark {
-    /* GitHub Dark / Primer Dark Palette */
-    --color-bg: 13 17 23;
-    --color-bg-subtle: 22 27 34;
-    --color-card: 22 27 34;
-    --color-border: 48 54 61;
-    --color-border-light: 33 38 45;
-    --color-text-primary: 240 246 252;
-    --color-text-secondary: 139 148 158;
-    --color-text-muted: 125 133 144;
-    --color-primary: 88 166 255;
-    --color-primary-hover: 56 139 253;
-    --color-accent: 163 113 247;
+    /* Refined Deep Graphite & OLED Dark Palette */
+    --color-bg: 0 0 0;
+    --color-bg-subtle: 22 22 23;
+    --color-card: 29 29 31;
+    --color-border: 66 66 69;
+    --color-border-light: 51 51 54;
+    --color-text-primary: 245 245 247;
+    --color-text-secondary: 134 134 139;
+    --color-text-muted: 110 110 115;
+    --color-primary: 41 151 255;
+    --color-primary-hover: 66 166 255;
+    --color-accent: 41 151 255;
   }
 
   html {
@@ -42,12 +42,12 @@
 
   body {
     @apply bg-background text-text-primary antialiased;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
-    letter-spacing: -0.01em;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+    letter-spacing: -0.015em;
   }
 
   ::selection {
-    @apply bg-primary/30 text-white;
+    @apply bg-primary/20 text-text-primary;
   }
 }
 
@@ -67,43 +67,43 @@ svg[id^="dmermaid"] {
 
 @layer components {
   .glass {
-    @apply bg-card/90 backdrop-blur-xl border border-border shadow-xl;
+    @apply bg-card/90 backdrop-blur-md border border-border;
   }
 
-  .text-gradient {
-    @apply bg-gradient-to-r from-indigo-500 via-sky-500 to-purple-500 dark:from-indigo-400 dark:via-sky-400 dark:to-purple-400 bg-clip-text text-transparent font-extrabold;
+  .text-headline {
+    @apply text-text-primary font-semibold tracking-tight;
+  }
+
+  .text-subhead {
+    @apply text-text-secondary font-normal tracking-normal;
   }
 
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold rounded-xl shadow-md shadow-indigo-500/20 transition-all duration-200 active:scale-95 disabled:opacity-50 border border-white/10;
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary-hover text-white text-sm font-medium rounded-full transition-colors active:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2;
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-background-secondary hover:bg-border/60 text-text-primary font-medium rounded-xl border border-border shadow-sm transition-all duration-200 active:scale-95;
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-card hover:bg-background-secondary text-text-primary text-sm font-medium rounded-full border border-border transition-colors active:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2;
   }
 
   .btn-ghost {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2 text-text-secondary hover:text-text-primary hover:bg-border/30 rounded-xl transition-all duration-200;
+    @apply inline-flex items-center justify-center gap-1.5 px-3 py-2 text-primary hover:text-primary-hover text-sm font-medium rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary;
   }
 
   .input-field {
-    @apply w-full px-4 py-2.5 bg-card border border-border rounded-xl text-text-primary placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-sans;
+    @apply w-full px-3.5 py-2.5 bg-card border border-border rounded-lg text-text-primary text-sm placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors font-sans;
   }
 
   .badge-primary {
-    @apply bg-primary/10 text-primary border border-primary/25;
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20;
   }
 
   .badge-secondary {
-    @apply bg-secondary/10 text-secondary border border-secondary/25;
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-background-secondary text-text-secondary border border-border;
   }
 
-  .badge-accent {
-    @apply bg-accent/10 text-accent border border-accent/25;
-  }
-
-  .badge-success {
-    @apply bg-success/10 text-success border border-success/25;
+  .badge-neutral {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-background-secondary text-text-secondary border border-border;
   }
 }
 
@@ -119,10 +119,10 @@ svg[id^="dmermaid"] {
   }
 
   .scrollbar-thin::-webkit-scrollbar-track {
-    @apply bg-background rounded;
+    @apply bg-background;
   }
 
   .scrollbar-thin::-webkit-scrollbar-thumb {
-    @apply bg-border rounded;
+    @apply bg-border rounded-full;
   }
 }
