@@ -134,21 +134,32 @@ npm run dev
 
   if (type === "flowchart" || lower.includes("flowchart")) {
     return `flowchart TD
-    A["User Request (${repoName})"] --> B["API Gateway & Router"]
-    B --> C["Authentication & JWT Security"]
-    C --> D["AST Parser & Code Extractor"]
-    D --> E["Database & Cache Layer"]
-    E --> F["AI Analytics Engine"]
-    F --> G["Interactive Client Dashboard"]`;
+    Start["1. Entry Point (${repoName})"] --> Route["2. Input Parsing & Route Handler"]
+    Route --> Validate{"3. Validate Input & State"}
+    Validate -->|Valid| Process["4. Core Business Logic & Algorithms"]
+    Validate -->|Invalid| ErrResponse["Error / Validation Response"]
+    Process --> Query["5. Database / Persistence Operations"]
+    Query --> Format["6. Format Output & Transform Data"]
+    Format --> Response["7. Return Result / Deliver Response"]`;
   }
 
   if (type === "architecture" || lower.includes("architecture")) {
     return `flowchart LR
-    A["React Client UI"] --> B["Node.js Express API Gateway"]
-    B --> C["Authentication Middleware"]
-    C --> D["Analysis Engine & AST Walker"]
-    D --> E["Database Storage"]
-    D --> F["AI Intelligence Service"]`;
+    subgraph Client_Tier["Client & Presentation Tier"]
+      UI["User Interface / Web Client"]
+    end
+    subgraph API_Tier["Application & Routing Tier"]
+      Gateway["API Gateway & Controllers (${repoName})"]
+      Services["Service Layer & Business Domain"]
+    end
+    subgraph Data_Tier["Data & Infrastructure Tier"]
+      Database[("Primary Database")]
+      Cache[("Cache / State Store")]
+    end
+    UI --> Gateway
+    Gateway --> Services
+    Services --> Database
+    Services --> Cache`;
   }
 
   return `# ${repoName} Overview

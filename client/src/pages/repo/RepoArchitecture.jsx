@@ -66,7 +66,10 @@ export default function RepoArchitecture() {
       )}
 
       {viewMode === 'mermaid' ? (
-        <MermaidDiagram definition={definition || `graph TD\n  Client[Frontend Client] --> API[Backend Service]\n  API --> DB[(Database)]`} />
+        <MermaidDiagram
+          definition={definition || `flowchart LR\n  Client["Frontend Client"] --> Gateway["API Gateway"]\n  Gateway --> DB[("Database")]`}
+          type="architecture"
+        />
       ) : (
         <ReactFlowDiagram />
       )}

@@ -116,7 +116,9 @@ async function getFlowchart(req, res, next) {
       result = await memoryStore.findAnalysis(repo._id, "flowchart");
     }
 
-    if (!result) result = await buildFlowchart(repo);
+    if (!result || !result.content || result.content.includes("expense-tracker") || result.content.includes("AST Parser & Code Extractor")) {
+      result = await buildFlowchart(repo);
+    }
 
     res.json({ result, flowchart: result.content });
   } catch (err) {
@@ -150,7 +152,9 @@ async function getArchitectureDiagram(req, res, next) {
       result = await memoryStore.findAnalysis(repo._id, "architecture");
     }
 
-    if (!result) result = await buildArchitecture(repo);
+    if (!result || !result.content || result.content.includes("expense-tracker") || result.content.includes("Analysis Engine & AST Walker") || result.content.startsWith("# ")) {
+      result = await buildArchitecture(repo);
+    }
 
     res.json({ result, architecture: result.content });
   } catch (err) {

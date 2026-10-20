@@ -42,7 +42,10 @@ export default function RepoFlowchart() {
         </div>
       )}
 
-      <MermaidDiagram definition={definition || `graph TD\n  A[Repository Entry] --> B[Flowchart Analysis]`} />
+      <MermaidDiagram
+        definition={definition || `flowchart TD\n  Start["1. Entry Point"] --> Process["2. Processing Engine"]\n  Process --> EndNode["3. Complete & Return"]`}
+        type="flowchart"
+      />
     </div>
   );
 }
