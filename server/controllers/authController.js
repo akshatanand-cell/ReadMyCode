@@ -469,14 +469,19 @@ async function githubAuth(req, res, next) {
 
     let user;
     if (isDbConnected()) {
-      user = await User.findOne({
-        $or: [{ githubId }, { email }, { githubUsername }],
-      });
+      if (req.user && req.user._id && req.user._id !== "demo_guest") {
+        user = await User.findById(req.user._id);
+      }
+      if (!user) {
+        user = await User.findOne({
+          $or: [{ githubId }, { email }, { githubUsername }],
+        });
+      }
 
       if (user) {
         user.githubId = githubId;
         user.githubUsername = githubUsername;
-        user.avatar = avatar;
+        if (avatar) user.avatar = avatar;
         if (ghToken) user.githubToken = ghToken;
         await user.save();
       } else {
@@ -531,6 +536,14 @@ async function githubAuth(req, res, next) {
   }
 }
 
+function getGithubConfig(req, res) {
+  const clientId = GITHUB_CLIENT_ID || process.env.GITHUB_CLIENT_ID || "";
+  res.json({
+    clientId,
+    isConfigured: Boolean(clientId),
+  });
+}
+
 async function getUserGithubRepos(req, res, next) {
   try {
     const userDoc = isDbConnected()
@@ -538,7 +551,13 @@ async function getUserGithubRepos(req, res, next) {
       : await memoryStore.findUserById(req.user._id);
 
     const token = req.query.token || userDoc?.githubToken || req.user?.githubToken || process.env.GITHUB_TOKEN;
-    const username = req.query.username || userDoc?.githubUsername || req.user?.githubUsername;
+    const username =
+      req.query.username ||
+      userDoc?.githubUsername ||
+      req.user?.githubUsername ||
+      (req.user?.email && req.user.email.includes("@users.noreply.github.com")
+        ? req.user.email.split("@")[0]
+        : null);
 
     let apiUrl = "";
     const headers = {
@@ -567,6 +586,10 @@ async function getUserGithubRepos(req, res, next) {
     }
 
     const rawRepos = await ghRes.json();
+    if (!Array.isArray(rawRepos)) {
+      return res.json({ repos: [], total: 0, username: username || "" });
+    }
+
     const repos = rawRepos.map((r) => ({
       id: r.id,
       name: r.name,
@@ -608,4 +631,5 @@ module.exports = {
   resetPasswordWithSecurityQuestion,
   githubAuth,
   getUserGithubRepos,
+  getGithubConfig,
 };

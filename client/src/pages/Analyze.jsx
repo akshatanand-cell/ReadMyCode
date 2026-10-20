@@ -61,8 +61,53 @@ const Analyze = () => {
   const fetchUserGithubRepos = async () => {
     setLoadingGithubRepos(true);
     try {
-      const res = await authAPI.getGithubRepos();
-      setUserGithubRepos(res.data?.repos || []);
+      const uname =
+        user?.githubUsername ||
+        localStorage.getItem('github_username') ||
+        (user?.email && user.email.includes('@users.noreply.github.com') ? user.email.split('@')[0] : null);
+
+      let repos = [];
+      try {
+        const res = await authAPI.getGithubRepos(uname ? { username: uname } : {});
+        repos = res.data?.repos || [];
+      } catch (apiErr) {
+        console.warn('API repo fetch failed, trying client fallback:', apiErr.message);
+      }
+
+      // If backend returned empty array or errored, fetch directly from GitHub API
+      if (repos.length === 0 && uname) {
+        try {
+          const ghRes = await fetch(`https://api.github.com/users/${uname}/repos?sort=updated&per_page=100`, {
+            headers: { Accept: 'application/vnd.github+json' },
+          });
+          if (ghRes.ok) {
+            const raw = await ghRes.json();
+            if (Array.isArray(raw)) {
+              repos = raw.map((r) => ({
+                id: r.id,
+                name: r.name,
+                fullName: r.full_name,
+                owner: r.owner?.login || uname,
+                avatarUrl: r.owner?.avatar_url || '',
+                description: r.description || 'No description provided',
+                url: r.html_url,
+                cloneUrl: r.clone_url,
+                isPrivate: Boolean(r.private),
+                defaultBranch: r.default_branch || 'main',
+                language: r.language || 'Codebase',
+                stars: r.stargazers_count || 0,
+                forks: r.forks_count || 0,
+                updatedAt: r.updated_at,
+                pushedAt: r.pushed_at,
+              }));
+            }
+          }
+        } catch (directErr) {
+          console.warn('Direct GitHub fetch failed:', directErr.message);
+        }
+      }
+
+      setUserGithubRepos(repos);
     } catch (err) {
       console.warn('Could not fetch GitHub repos:', err.message);
     } finally {
@@ -71,7 +116,13 @@ const Analyze = () => {
   };
 
   useEffect(() => {
-    if (user?.hasGithubToken || user?.githubUsername || localStorage.getItem('github_token')) {
+    const hasGithub =
+      user?.hasGithubToken ||
+      user?.githubUsername ||
+      localStorage.getItem('github_token') ||
+      localStorage.getItem('github_username');
+
+    if (hasGithub) {
       fetchUserGithubRepos();
     }
   }, [user]);
@@ -249,7 +300,7 @@ const Analyze = () => {
                               {user?.name || 'GitHub User'}
                             </span>
                             <span className="px-2 py-0.5 rounded-full text-[11px] font-mono bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-                              @{user?.githubUsername || 'connected'}
+                              @{user?.githubUsername || localStorage.getItem('github_username') || 'connected'}
                             </span>
                           </div>
                           <p className="text-[11px] text-text-muted">Import repositories from your linked GitHub account</p>
@@ -319,16 +370,25 @@ const Analyze = () => {
                         <Github className="w-8 h-8 text-text-muted mx-auto mb-2" />
                         <p className="text-sm font-medium text-text-primary">No repositories found</p>
                         <p className="text-xs text-text-muted mt-1 max-w-sm mx-auto">
-                          Make sure your token has access to your repositories or click switch to connect with a personal access token.
+                          Click below to connect your GitHub account or switch account with 1-click.
                         </p>
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => setIsGithubModalOpen(true)}
-                          className="mt-3"
-                        >
-                          Connect with Token
-                        </Button>
+                        <div className="flex items-center justify-center gap-2 mt-3">
+                          <Button
+                            size="sm"
+                            variant="primary"
+                            onClick={() => setIsGithubModalOpen(true)}
+                          >
+                            Connect to GitHub
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={fetchUserGithubRepos}
+                            leftIcon={<RefreshCw className="w-3.5 h-3.5" />}
+                          >
+                            Retry
+                          </Button>
+                        </div>
                       </div>
                     ) : (
                       <div className="space-y-2.5 max-h-[380px] overflow-y-auto pr-1 scrollbar-thin">

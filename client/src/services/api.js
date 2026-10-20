@@ -43,6 +43,7 @@ export const authAPI = {
   getSecurityQuestion: (email) => api.post('/auth/security-question', { email }),
   resetPasswordWithSecurity: (data) => api.post('/auth/reset-password-security', data),
   githubLogin: (data) => api.post('/auth/github', data),
+  getGithubConfig: () => api.get('/auth/github/config'),
   getGithubRepos: (params) => api.get('/auth/github/repos', { params }),
 };
 

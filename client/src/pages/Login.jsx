@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import Button from '@/components/common/Button';
 import Input from '@/components/common/Input';
 import GithubConnectModal from '@/components/common/GithubConnectModal';
+import { authAPI } from '@/services/api';
 import { cn } from '@/utils/helpers';
 
 const Login = () => {
@@ -16,6 +17,26 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isGithubModalOpen, setIsGithubModalOpen] = useState(false);
+
+  const handleGithubClick = async () => {
+    try {
+      const envClientId = import.meta.env.VITE_GITHUB_CLIENT_ID;
+      if (envClientId) {
+        const redirectUri = `${window.location.origin}/auth/github/callback`;
+        window.location.href = `https://github.com/login/oauth/authorize?client_id=${envClientId}&scope=repo,read:user,user:email&redirect_uri=${encodeURIComponent(redirectUri)}`;
+        return;
+      }
+      const res = await authAPI.getGithubConfig();
+      if (res.data?.clientId) {
+        const redirectUri = `${window.location.origin}/auth/github/callback`;
+        window.location.href = `https://github.com/login/oauth/authorize?client_id=${res.data.clientId}&scope=repo,read:user,user:email&redirect_uri=${encodeURIComponent(redirectUri)}`;
+        return;
+      }
+    } catch {
+      // fallback to modal
+    }
+    setIsGithubModalOpen(true);
+  };
 
   const validate = () => {
     const newErrors = {};
@@ -125,7 +146,7 @@ const Login = () => {
 
             <button
               type="button"
-              onClick={() => setIsGithubModalOpen(true)}
+              onClick={handleGithubClick}
               className="mt-4 w-full flex items-center justify-center gap-2.5 px-4 py-3 bg-background-secondary border border-border rounded-xl text-text-primary hover:bg-border/30 hover:border-primary/50 transition-all shadow-sm font-semibold text-sm group"
             >
               <Github className="w-5 h-5 text-text-primary group-hover:scale-110 transition-transform" />

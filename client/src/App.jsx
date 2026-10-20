@@ -12,6 +12,7 @@ import Home from '@/pages/Home';
 import Login from '@/pages/Login';
 import Register from '@/pages/Register';
 import ForgotPassword from '@/pages/ForgotPassword';
+import GithubCallback from '@/pages/GithubCallback';
 import Analyze from '@/pages/Analyze';
 import Dashboard from '@/pages/Dashboard';
 import History from '@/pages/History';
@@ -67,6 +68,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route path="/auth/github/callback" element={<GithubCallback />} />
       </Route>
 
       {/* Protected routes with DashboardLayout */}

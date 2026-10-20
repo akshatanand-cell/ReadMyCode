@@ -158,6 +158,9 @@ export function AuthProvider({ children }) {
       const { token, user: loggedUser, message } = response.data;
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(loggedUser));
+      if (loggedUser.githubUsername) {
+        localStorage.setItem('github_username', loggedUser.githubUsername);
+      }
       setUser(loggedUser);
       setIsAuthenticated(true);
       toast.success(message || `Welcome, ${loggedUser.name}!`);
