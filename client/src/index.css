@@ -51,17 +51,14 @@
   }
 }
 
-/* Eradicate global Mermaid error elements inserted into document.body */
-body > [id^="dmermaid"],
-body > [id^="mermaid-"],
+/* Hide only unhandled Mermaid syntax error banners injected into document.body */
+#dmermaid.mermaid-error,
 body > .mermaid-error,
-[id^="dmermaid"],
-svg[id^="dmermaid"] {
+body > .error-icon,
+body > .error-text {
   display: none !important;
   visibility: hidden !important;
   opacity: 0 !important;
-  height: 0 !important;
-  width: 0 !important;
   pointer-events: none !important;
 }
 

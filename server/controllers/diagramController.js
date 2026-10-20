@@ -111,7 +111,10 @@ async function getFlowchart(req, res, next) {
 
     let result;
     if (isDbConnected()) {
-      result = await AnalysisResult.findOne({ repo: repo._id, type: "flowchart" }).sort({ createdAt: -1 });
+      result = await AnalysisResult.findOne({
+        $or: [{ repo: repo._id }, { repo: String(repo._id) }],
+        type: "flowchart",
+      }).sort({ createdAt: -1 });
     } else {
       result = await memoryStore.findAnalysis(repo._id, "flowchart");
     }
@@ -147,7 +150,10 @@ async function getArchitectureDiagram(req, res, next) {
 
     let result;
     if (isDbConnected()) {
-      result = await AnalysisResult.findOne({ repo: repo._id, type: "architecture" }).sort({ createdAt: -1 });
+      result = await AnalysisResult.findOne({
+        $or: [{ repo: repo._id }, { repo: String(repo._id) }],
+        type: "architecture",
+      }).sort({ createdAt: -1 });
     } else {
       result = await memoryStore.findAnalysis(repo._id, "architecture");
     }

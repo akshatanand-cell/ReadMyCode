@@ -104,9 +104,11 @@ const RepoOverview = () => {
     }
     setIsPushing(true);
     try {
+      const cleanToken = pushToken ? pushToken.trim() : undefined;
       const res = await repoAPI.pushToGithub(id, {
         repoName: pushRepoName,
-        githubToken: pushToken || undefined,
+        token: cleanToken,
+        githubToken: cleanToken,
         isPrivate: isPrivateRepo,
       });
       toast.success(res.data.message || 'Successfully exported and pushed to GitHub!');

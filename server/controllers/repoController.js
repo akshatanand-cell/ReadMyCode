@@ -355,21 +355,23 @@ async function deleteRepo(req, res, next) {
 async function pushRepoToGitHub(req, res, next) {
   try {
     const { id } = req.params;
-    const { token, repoName, isPrivate, description } = req.body;
+    const { token, githubToken: ghToken, repoName, isPrivate, description } = req.body;
 
-    const githubToken = token || req.user?.githubToken || process.env.GITHUB_TOKEN;
+    const githubToken =
+      (token && token.trim()) ||
+      (ghToken && ghToken.trim()) ||
+      (req.body.githubToken && req.body.githubToken.trim()) ||
+      req.headers["x-github-token"] ||
+      req.user?.githubToken ||
+      process.env.GITHUB_TOKEN;
+
     if (!githubToken) {
       return res.status(400).json({
         message: "GitHub Personal Access Token is required to push to GitHub.",
       });
     }
 
-    let repoDoc;
-    if (isDbConnected()) {
-      repoDoc = await Repo.findById(id);
-    } else {
-      repoDoc = await memoryStore.findRepoById(id, req.user?._id);
-    }
+    const repoDoc = await fetchRepoHelper(id, req.user?._id);
 
     if (!repoDoc) {
       return res.status(404).json({ message: "Repository not found" });
