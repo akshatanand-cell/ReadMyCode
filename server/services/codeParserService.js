@@ -1,5 +1,6 @@
 const parser = require("@babel/parser");
 const traverse = require("@babel/traverse").default;
+const path = require("path");
 const logger = require("../utils/logger");
 
 const PARSE_OPTS = {
@@ -8,12 +9,128 @@ const PARSE_OPTS = {
   errorRecovery: true,
 };
 
+function estimateComplexity(code = "") {
+  const loops = (code.match(/\b(for|while)\b/g) || []).length;
+  const conditionals = (code.match(/\b(if|elif|else if|case)\b/g) || []).length;
+  const recursions = (code.match(/\b[a-zA-Z0-9_]+\s*\(/g) || []).length;
+
+  if (loops >= 2) return "O(N^2)";
+  if (loops === 1) return conditionals >= 2 ? "O(N log N)" : "O(N)";
+  if (recursions > 5) return "O(2^N)";
+  return "O(1)";
+}
+
 /**
- * Parses a JS/JSX/TS file into an AST and extracts top-level functions,
- * classes, and import/export info. Falls back gracefully on parse errors
- * (common with hackathon-quality code).
+ * Parses Python files using regex and syntax pattern matching
  */
-function parseFile(filePath, content) {
+function parsePythonFile(filePath, content) {
+  const result = { filePath, functions: [], classes: [], imports: [], exports: [], parseError: null };
+  const lines = content.split("\n");
+
+  const fnRegex = /^(?:[ \t]*)(?:async\s+)?def\s+([a-zA-Z0-9_]+)\s*\(([^)]*)\)(?:\s*->\s*([^:]+))?:/m;
+  const classRegex = /^(?:[ \t]*)class\s+([a-zA-Z0-9_]+)(?:\(([^)]*)\))?:/m;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    // Detect imports
+    if (/^\s*(import\s+|from\s+)/.test(line)) {
+      result.imports.push(line.trim());
+    }
+
+    // Detect classes
+    const classMatch = line.match(classRegex);
+    if (classMatch) {
+      result.classes.push({
+        name: classMatch[1],
+        bases: classMatch[2] ? classMatch[2].split(",").map((s) => s.trim()) : [],
+        loc: i + 1,
+      });
+    }
+
+    // Detect functions
+    const fnMatch = line.match(fnRegex);
+    if (fnMatch) {
+      const name = fnMatch[1];
+      const rawParams = fnMatch[2] || "";
+      const returnType = fnMatch[3] ? fnMatch[3].trim() : "None";
+      const params = rawParams
+        .split(",")
+        .map((p) => p.trim())
+        .filter((p) => p.length > 0 && p !== "self" && p !== "cls");
+
+      // Extract function block
+      const startLine = i;
+      let bodyLines = [line];
+      let docstring = "";
+
+      for (let j = i + 1; j < Math.min(lines.length, i + 40); j++) {
+        if (/^\s*""".*"""\s*$/.test(lines[j]) || /^\s*'''.*'''\s*$/.test(lines[j])) {
+          docstring = lines[j].replace(/["']/g, "").trim();
+        }
+        if (lines[j].trim() === "" || /^\s+/.test(lines[j])) {
+          bodyLines.push(lines[j]);
+        } else {
+          break;
+        }
+      }
+
+      const code = bodyLines.join("\n");
+      result.functions.push({
+        name,
+        params,
+        async: line.includes("async def"),
+        returnType,
+        docstring,
+        loc: startLine + 1,
+        code: code.slice(0, 1000),
+        complexity: estimateComplexity(code),
+      });
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Parses C, C++, Java, C#, Go using generic signature matching
+ */
+function parseGenericCodeFile(filePath, content) {
+  const result = { filePath, functions: [], classes: [], imports: [], exports: [], parseError: null };
+  const lines = content.split("\n");
+
+  const methodRegex = /(?:public|private|protected|static|final|async|void|int|float|double|char|bool|boolean|string|auto|func)\s+([a-zA-Z0-9_]+)\s*\(([^)]*)\)/;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const match = line.match(methodRegex);
+    if (match && !line.includes("=") && !line.startsWith("//") && !line.startsWith("*")) {
+      const name = match[1];
+      if (name && !["if", "for", "while", "switch", "catch"].includes(name)) {
+        const rawParams = match[2] || "";
+        const params = rawParams
+          .split(",")
+          .map((p) => p.trim().split(/\s+/).pop())
+          .filter((p) => p && p.length > 0);
+
+        result.functions.push({
+          name,
+          params,
+          loc: i + 1,
+          code: lines.slice(i, Math.min(lines.length, i + 25)).join("\n"),
+          complexity: estimateComplexity(line),
+        });
+      }
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Parses JS/TS using Babel AST
+ */
+function parseJsFile(filePath, content) {
   const result = { filePath, functions: [], classes: [], imports: [], exports: [], parseError: null };
 
   try {
@@ -22,24 +139,28 @@ function parseFile(filePath, content) {
     traverse(ast, {
       FunctionDeclaration(p) {
         if (p.node.id) {
+          const code = sliceSource(content, p.node);
           result.functions.push({
             name: p.node.id.name,
             params: p.node.params.map(paramName),
-            async: p.node.async,
+            async: Boolean(p.node.async),
             loc: p.node.loc ? p.node.loc.start.line : null,
-            code: sliceSource(content, p.node),
+            code,
+            complexity: estimateComplexity(code),
           });
         }
       },
       VariableDeclarator(p) {
         const init = p.node.init;
-        if (init && (init.type === "ArrowFunctionExpression" || init.type === "FunctionExpression") && p.node.id.name) {
+        if (init && (init.type === "ArrowFunctionExpression" || init.type === "FunctionExpression") && p.node.id?.name) {
+          const code = sliceSource(content, p.node);
           result.functions.push({
             name: p.node.id.name,
             params: init.params.map(paramName),
-            async: init.async,
+            async: Boolean(init.async),
             loc: p.node.loc ? p.node.loc.start.line : null,
-            code: sliceSource(content, p.node),
+            code,
+            complexity: estimateComplexity(code),
           });
         }
       },
@@ -48,34 +169,45 @@ function parseFile(filePath, content) {
           result.classes.push({
             name: p.node.id.name,
             methods: p.node.body.body
-              .filter((m) => m.type === "ClassMethod")
+              .filter((m) => m.type === "ClassMethod" && m.key?.name)
               .map((m) => m.key.name),
           });
         }
       },
       ImportDeclaration(p) {
-        result.imports.push(p.node.source.value);
-      },
-      ExportNamedDeclaration() {
-        result.exports.push("named");
-      },
-      ExportDefaultDeclaration() {
-        result.exports.push("default");
+        if (p.node.source?.value) result.imports.push(p.node.source.value);
       },
     });
   } catch (err) {
     result.parseError = err.message;
-    logger.warn(`AST parse failed for ${filePath}: ${err.message}`);
+    // Fall back to regex parser
+    return parseGenericCodeFile(filePath, content);
   }
 
   return result;
 }
 
+function parseFile(filePath, content) {
+  const ext = path.extname(filePath).toLowerCase();
+
+  if (ext === ".py") {
+    return parsePythonFile(filePath, content);
+  }
+  if ([".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs"].includes(ext)) {
+    return parseJsFile(filePath, content);
+  }
+  if ([".java", ".cpp", ".c", ".h", ".hpp", ".cs", ".go", ".rs", ".php", ".rb"].includes(ext)) {
+    return parseGenericCodeFile(filePath, content);
+  }
+
+  return { filePath, functions: [], classes: [], imports: [], exports: [], parseError: null };
+}
+
 function paramName(p) {
   if (p.type === "Identifier") return p.name;
-  if (p.type === "AssignmentPattern" && p.left.type === "Identifier") return p.left.name;
+  if (p.type === "AssignmentPattern" && p.left?.type === "Identifier") return p.left.name;
   if (p.type === "ObjectPattern") return "{destructured}";
-  if (p.type === "RestElement") return `...${p.argument.name || "rest"}`;
+  if (p.type === "RestElement") return `...${p.argument?.name || "rest"}`;
   return "arg";
 }
 
@@ -84,11 +216,17 @@ function sliceSource(content, node) {
   return content.slice(node.start, node.end);
 }
 
-/** Parses a whole set of {path, content} file objects, skipping non-parseable extensions */
-function parseFiles(files) {
-  const PARSEABLE = new Set([".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs"]);
+function parseFiles(files = []) {
+  const PARSEABLE = new Set([
+    ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs",
+    ".py", ".java", ".cpp", ".c", ".h", ".hpp", ".cs", ".go", ".rs", ".php", ".rb",
+  ]);
+
   return files
-    .filter((f) => PARSEABLE.has(f.extension))
+    .filter((f) => {
+      const ext = (f.extension || path.extname(f.path || "")).toLowerCase();
+      return PARSEABLE.has(ext);
+    })
     .map((f) => parseFile(f.path, f.content));
 }
 

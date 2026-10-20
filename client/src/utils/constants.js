@@ -18,9 +18,11 @@ export const ROUTES = {
   ANALYZE: '/analyze',
   REPO: '/repo/:id',
   README: '/repo/:id/readme',
+  ARCHITECTURE: '/repo/:id/architecture',
+  AGENTS: '/repo/:id/agents',
+  TASK_BREAKDOWN: '/repo/:id/task-breakdown',
   API_DOCS: '/repo/:id/api-docs',
   FLOWCHART: '/repo/:id/flowchart',
-  ARCHITECTURE: '/repo/:id/architecture',
   FUNCTIONS: '/repo/:id/functions',
   DEBUGGER: '/repo/:id/debugger',
   HISTORY: '/history',
@@ -36,9 +38,11 @@ export const SIDEBAR_ITEMS = [
 
 export const REPO_TABS = [
   { path: 'readme', label: 'README', icon: 'FileText' },
-  { path: 'api-docs', label: 'API Docs', icon: 'Code2' },
-  { path: 'flowchart', label: 'Flowchart', icon: 'GitBranch' },
   { path: 'architecture', label: 'Architecture', icon: 'Network' },
+  { path: 'agents', label: 'Agents', icon: 'Bot' },
+  { path: 'task-breakdown', label: 'Tasks', icon: 'ListTodo' },
+  { path: 'flowchart', label: 'Flowchart', icon: 'GitBranch' },
+  { path: 'api-docs', label: 'API Docs', icon: 'Code2' },
   { path: 'functions', label: 'Functions', icon: 'FunctionSquare' },
   { path: 'debugger', label: 'Debugger', icon: 'Bug' },
 ];

@@ -19,6 +19,9 @@ import {
   GitCommit,
   Copy,
   Check,
+  Bot,
+  ListTodo,
+  Rocket,
 } from 'lucide-react';
 import Card from '@/components/common/Card';
 import Button from '@/components/common/Button';
@@ -31,6 +34,7 @@ import { useAuth } from '@/context/AuthContext';
 import { repoAPI } from '@/services/api';
 import toast from 'react-hot-toast';
 import { ANALYSIS_STATUS, REPO_TABS } from '@/utils/constants';
+import { cn } from '@/utils/helpers';
 
 const tabIconMap = {
   FileText,
@@ -39,6 +43,8 @@ const tabIconMap = {
   Network,
   FunctionSquare,
   Bug,
+  Bot,
+  ListTodo,
 };
 
 const RepoOverview = () => {
@@ -162,7 +168,7 @@ const RepoOverview = () => {
           </motion.div>
         )}
 
-        {/* GitHub Export Banner */}
+        {/* GitHub Export / Connected Banner */}
         {(!currentRepo?.repoUrl?.startsWith('http') && !currentRepo?.githubUrl?.startsWith('http')) ? (
           <motion.div
             initial={{ opacity: 0, y: -8 }}
@@ -185,7 +191,7 @@ const RepoOverview = () => {
                     </span>
                   </div>
                   <p className="text-xs text-text-muted mt-0.5">
-                    Create a new repository under your GitHub account and push all extracted source files in one click.
+                    Create a new repository under your GitHub account and push all source files + 4 spec docs (README, ARCHITECTURE, AGENTS, TASK_BREAKDOWN) in one click.
                   </p>
                 </div>
               </div>
@@ -201,33 +207,127 @@ const RepoOverview = () => {
             </div>
           </motion.div>
         ) : (
-          <div className="flex items-center justify-between bg-card border border-border rounded-xl px-4 py-3 text-xs text-text-secondary">
-            <div className="flex items-center gap-2 min-w-0">
-              <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-              <span className="shrink-0 font-medium text-text-primary">GitHub Repository:</span>
-              <a
-                href={currentRepo.repoUrl || currentRepo.githubUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary hover:underline font-mono truncate"
-              >
-                {currentRepo.repoUrl || currentRepo.githubUrl}
-              </a>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between bg-card border border-border rounded-xl px-4 py-3 text-xs text-text-secondary">
+              <div className="flex items-center gap-2 min-w-0">
+                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                <span className="shrink-0 font-medium text-text-primary">GitHub Repository:</span>
+                <a
+                  href={currentRepo.repoUrl || currentRepo.githubUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline font-mono truncate"
+                >
+                  {currentRepo.repoUrl || currentRepo.githubUrl}
+                </a>
+              </div>
+              <div className="flex items-center gap-3 shrink-0 ml-3">
+                <a
+                  href={currentRepo.repoUrl || currentRepo.githubUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-primary hover:text-primary-hover font-medium"
+                >
+                  Open on GitHub <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              </div>
             </div>
-            <a
-              href={currentRepo.repoUrl || currentRepo.githubUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-primary hover:text-primary-hover font-medium shrink-0 ml-3"
-            >
-              Open on GitHub <ExternalLink className="w-3.5 h-3.5" />
-            </a>
+
+            {/* 1-Click Deployment Banner */}
+            {(() => {
+              const ghUrl = currentRepo.repoUrl?.startsWith('http') ? currentRepo.repoUrl : currentRepo.githubUrl;
+              const isPython =
+                currentRepo.projectType === 'python' ||
+                currentRepo.language?.toLowerCase() === 'python' ||
+                currentRepo.files?.some?.((f) => f.extension === '.py');
+
+              const deployType = currentRepo.deployType || (isPython ? 'streamlit' : 'vercel');
+              let deployUrl = currentRepo.deployUrl;
+              if (!deployUrl && ghUrl?.startsWith('http')) {
+                const ghMatch = ghUrl.match(/github\.com\/([^/]+)\/([^/]+?)(?:\.git|\/|$)/);
+                if (isPython && ghMatch) {
+                  deployUrl = `https://share.streamlit.io/deploy?repository=${encodeURIComponent(
+                    ghMatch[1] + '/' + ghMatch[2]
+                  )}&branch=${encodeURIComponent(currentRepo.defaultBranch || 'main')}&mainModule=${encodeURIComponent(
+                    currentRepo.entryPoint || 'app.py'
+                  )}`;
+                } else {
+                  deployUrl = `https://vercel.com/new/clone?repository-url=${encodeURIComponent(ghUrl)}`;
+                }
+              }
+
+              if (!deployUrl) return null;
+
+              return (
+                <motion.div
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={cn(
+                    'border rounded-2xl p-5 shadow-sm relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4',
+                    deployType === 'streamlit'
+                      ? 'bg-rose-500/[0.04] border-rose-500/25'
+                      : 'bg-primary/[0.04] border-primary/25'
+                  )}
+                >
+                  <div className="flex items-center gap-3.5">
+                    <div
+                      className={cn(
+                        'w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border',
+                        deployType === 'streamlit'
+                          ? 'bg-rose-500/15 border-rose-500/30 text-rose-500'
+                          : 'bg-primary/15 border-primary/30 text-primary'
+                      )}
+                    >
+                      <Rocket className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-sm font-bold text-text-primary">
+                          {deployType === 'streamlit' ? '1-Click Streamlit Cloud Deployment' : '1-Click Vercel Deployment'}
+                        </h4>
+                        <span
+                          className={cn(
+                            'px-2 py-0.5 rounded-full text-[11px] font-semibold border',
+                            deployType === 'streamlit'
+                              ? 'bg-rose-500/15 text-rose-500 border-rose-500/30'
+                              : 'bg-primary/15 text-primary border-primary/30'
+                          )}
+                        >
+                          {deployType === 'streamlit' ? 'Python / Streamlit' : 'Edge Web Runtime'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-text-muted mt-0.5">
+                        {deployType === 'streamlit'
+                          ? 'Python project detected! Launch and host your app live on Streamlit Community Cloud with zero server setup.'
+                          : 'Web project detected! Deploy this repository to Vercel global edge network instantly.'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <a
+                    href={deployUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={cn(
+                      'inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-xs transition-all shadow-md shrink-0 text-white',
+                      deployType === 'streamlit'
+                        ? 'bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 shadow-rose-500/20'
+                        : 'bg-gradient-to-r from-primary to-secondary hover:opacity-90 shadow-primary/20'
+                    )}
+                  >
+                    <Rocket className="w-4 h-4" />
+                    <span>{deployType === 'streamlit' ? 'Deploy on Streamlit' : 'Deploy on Vercel'}</span>
+                    <ExternalLink className="w-3.5 h-3.5 opacity-80" />
+                  </a>
+                </motion.div>
+              );
+            })()}
           </div>
         )}
 
         {/* Feature Navigation Cards */}
         {(currentRepo.status === 'ready' || currentRepo.status === 'completed' || currentRepo.status === ANALYSIS_STATUS.COMPLETED) && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {REPO_TABS.map((tab, index) => {
               const Icon = tabIconMap[tab.icon] || FileText;
               return (
@@ -235,26 +335,28 @@ const RepoOverview = () => {
                   key={tab.path}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
+                  transition={{ delay: index * 0.04 }}
                 >
                   <Link to={`/repo/${id}/${tab.path}`}>
                     <Card hover glow className="h-full border border-border bg-card backdrop-blur-xl hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/10 group transition-all duration-300">
-                      <div className="flex items-start gap-4">
-                        <div className="w-12 h-12 bg-primary/10 border border-primary/25 rounded-xl flex items-center justify-center group-hover:scale-110 group-hover:bg-primary transition-all duration-300 shadow-md">
-                          <Icon className="w-6 h-6 text-primary group-hover:text-white transition-colors" />
+                      <div className="flex items-start gap-3.5">
+                        <div className="w-10 h-10 bg-primary/10 border border-primary/25 rounded-xl flex items-center justify-center group-hover:scale-110 group-hover:bg-primary transition-all duration-300 shadow-md shrink-0">
+                          <Icon className="w-5 h-5 text-primary group-hover:text-white transition-colors" />
                         </div>
-                        <div className="flex-1">
-                          <h3 className="text-base font-bold text-text-primary group-hover:text-primary transition-colors">{tab.label}</h3>
-                          <p className="text-xs text-text-secondary mt-1 leading-relaxed">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-sm font-bold text-text-primary group-hover:text-primary transition-colors truncate">{tab.label}</h3>
+                          <p className="text-[11px] text-text-secondary mt-0.5 leading-relaxed line-clamp-2">
                             {tab.path === 'readme' && 'AI-generated markdown documentation'}
-                            {tab.path === 'api-docs' && 'Structured RESTful API endpoints'}
+                            {tab.path === 'architecture' && 'Component architecture diagram & system map'}
+                            {tab.path === 'agents' && 'AI agent prompt rules, boundaries & mission constitution'}
+                            {tab.path === 'task-breakdown' && 'Engineering milestones & phased implementation roadmap'}
                             {tab.path === 'flowchart' && 'Interactive visual execution flow'}
-                            {tab.path === 'architecture' && 'Component architecture diagram'}
+                            {tab.path === 'api-docs' && 'Structured RESTful API endpoints'}
                             {tab.path === 'functions' && 'Deep function code breakdowns'}
                             {tab.path === 'debugger' && 'AI-assisted code debugger'}
                           </p>
                         </div>
-                        <ChevronRight className="w-5 h-5 text-text-muted group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                        <ChevronRight className="w-4 h-4 text-text-muted group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0 self-center" />
                       </div>
                     </Card>
                   </Link>

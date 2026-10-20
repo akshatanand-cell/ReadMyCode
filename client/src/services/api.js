@@ -76,6 +76,8 @@ export const analysisAPI = {
   getArchitecture: (repoId) => api.get(`/diagrams/architecture/${repoId}`),
   getFunctions: (repoId) => api.get(`/diagrams/functions/${repoId}`),
   getDebugger: (data) => api.post(`/debug`, data),
+  getAgents: (repoId) => api.get(`/docs/${repoId}/agents`),
+  getTaskBreakdown: (repoId) => api.get(`/docs/${repoId}/task-breakdown`),
 };
 
 // Dashboard APIs

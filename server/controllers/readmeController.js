@@ -2,35 +2,42 @@ const path = require("path");
 const mongoose = require("mongoose");
 const Repo = require("../models/Repo");
 const AnalysisResult = require("../models/AnalysisResult");
-const { walkRepo } = require("../utils/fileWalker");
 const { generateReadme } = require("../services/readmeGenerator");
+const { generateReadmeDoc } = require("../services/specDocGenerator");
 const logger = require("../utils/logger");
 const memoryStore = require("../utils/memoryStore");
-const { fetchRepoHelper, isDbConnected } = require("../utils/repoFetcher");
+const { fetchRepoHelper, getRepoFiles, isDbConnected } = require("../utils/repoFetcher");
 
-const KEY_FILE_NAMES = ["package.json", "README.md", "index.js", "app.js", "server.js", "main.py"];
+const KEY_FILE_NAMES = ["package.json", "requirements.txt", "README.md", "index.js", "app.js", "server.js", "main.py", "app.py"];
 
 async function buildReadme(repo) {
-  const localPath = repo.get ? repo.get("localPath") : repo.localPath;
-  if (!localPath) {
-    const err = new Error("Repo has not been cloned/parsed yet");
-    err.status = 400;
-    throw err;
+  if (repo.specDocs?.readme) {
+    const markdown = repo.specDocs.readme;
+    if (isDbConnected()) {
+      return AnalysisResult.create({ repo: repo._id, owner: repo.owner, type: "readme", content: markdown });
+    } else {
+      return memoryStore.createAnalysis({ repo: repo._id, owner: repo.owner, type: "readme", content: markdown });
+    }
   }
 
-  const allFiles = walkRepo(localPath);
+  const allFiles = getRepoFiles(repo);
+  const repoName = repo.repoName || repo.name || "Repository";
+  const treeSummary = allFiles.map((f) => f.path).join("\n");
   const keyFiles = allFiles
     .filter((f) => KEY_FILE_NAMES.includes(path.basename(f.path)))
     .map((f) => `--- ${f.path} ---\n${f.content}`)
     .join("\n\n");
 
-  const treeSummary = allFiles.map((f) => f.path).join("\n");
+  let markdown = "";
+  try {
+    markdown = await generateReadme({ repoName, tree: treeSummary, keyFiles });
+  } catch (err) {
+    markdown = generateReadmeDoc({ repoName, files: allFiles, tree: treeSummary });
+  }
 
-  const markdown = await generateReadme({
-    repoName: repo.repoName || repo.name || "Repository",
-    tree: treeSummary,
-    keyFiles,
-  });
+  if (!markdown || markdown.toLowerCase().includes("expense-tracker")) {
+    markdown = generateReadmeDoc({ repoName, files: allFiles, tree: treeSummary });
+  }
 
   if (isDbConnected()) {
     return AnalysisResult.create({
@@ -51,7 +58,7 @@ async function buildReadme(repo) {
 
 async function createReadme(req, res, next) {
   try {
-    const repo = await fetchRepoHelper(req.params.repoId, req.user._id);
+    const repo = await fetchRepoHelper(req.params.repoId, req.user?._id);
     if (!repo) return res.status(404).json({ message: "Repo not found" });
 
     const result = await buildReadme(repo);
@@ -65,7 +72,7 @@ async function createReadme(req, res, next) {
 
 async function getReadme(req, res, next) {
   try {
-    const repo = await fetchRepoHelper(req.params.repoId, req.user._id);
+    const repo = await fetchRepoHelper(req.params.repoId, req.user?._id);
     if (!repo) return res.status(404).json({ message: "Repo not found" });
 
     let result;

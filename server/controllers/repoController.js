@@ -4,8 +4,19 @@ const mongoose = require("mongoose");
 const AdmZip = require("adm-zip");
 const simpleGit = require("simple-git");
 const Repo = require("../models/Repo");
+const AnalysisResult = require("../models/AnalysisResult");
 const { cloneRepo, cleanupRepo, parseRepoUrl, pushCodeToGitHub } = require("../services/githubService");
 const { walkRepo, getTree } = require("../utils/fileWalker");
+const {
+  detectProjectDetails,
+  generateReadmeDoc,
+  generateArchitectureDoc,
+  generateArchitectureMermaid,
+  generateAgentsDoc,
+  generateTaskBreakdownDoc,
+  generateFlowchartMermaid,
+} = require("../services/specDocGenerator");
+const { explainFunctions } = require("../services/functionExplainer");
 const logger = require("../utils/logger");
 const memoryStore = require("../utils/memoryStore");
 
@@ -64,25 +75,8 @@ async function analyzeZip(req, res, next) {
   try {
     if (!zipPath) return res.status(400).json({ message: "No ZIP file uploaded" });
 
-    const repoName = path.basename(req.file.originalname, ".zip");
+    const repoName = path.basename(req.file.originalname, ".zip") || "codebase-project";
     const extractDir = zipPath.replace(/\.zip$/i, "");
-
-    let repoDoc;
-    if (isDbConnected()) {
-      repoDoc = await Repo.create({
-        owner: req.user._id,
-        repoUrl: `zip-upload:${req.file.originalname}`,
-        repoName,
-        status: "parsing",
-      });
-    } else {
-      repoDoc = await memoryStore.createRepo({
-        owner: req.user._id,
-        repoUrl: `zip-upload:${req.file.originalname}`,
-        repoName,
-        status: "parsing",
-      });
-    }
 
     const zip = new AdmZip(zipPath);
     zip.extractAllTo(extractDir, true);
@@ -93,12 +87,88 @@ async function analyzeZip(req, res, next) {
         ? path.join(extractDir, entries[0].name)
         : extractDir;
 
+    const allFiles = walkRepo(effectiveRoot);
     const tree = getTree(effectiveRoot);
-    repoDoc.fileTree = tree;
-    repoDoc.status = "ready";
-    repoDoc.set("localPath", effectiveRoot, { strict: false });
-    await repoDoc.save();
+    const treeSummary = allFiles.map((f) => f.path).join("\n");
 
+    // 1. Detect project characteristics (Python / Node / Java / C++ / Streamlit)
+    const projectDetails = detectProjectDetails(allFiles, repoName);
+
+    // 2. Generate the 4 Essential Spec Documents
+    const readmeDoc = generateReadmeDoc({ repoName, files: allFiles, tree: treeSummary });
+    const architectureDoc = generateArchitectureDoc({ repoName, files: allFiles });
+    const architectureMermaid = generateArchitectureMermaid({ repoName, files: allFiles });
+    const agentsDoc = generateAgentsDoc({ repoName, files: allFiles });
+    const taskBreakdownDoc = generateTaskBreakdownDoc({ repoName, files: allFiles });
+    const flowchartDoc = generateFlowchartMermaid({ repoName, files: allFiles });
+
+    // 3. Multi-language AST/Regex Function Parsing
+    const parsedFunctions = await explainFunctions(allFiles, { limit: 30 });
+
+    const specDocs = {
+      readme: readmeDoc,
+      architecture: architectureDoc,
+      agents: agentsDoc,
+      taskBreakdown: taskBreakdownDoc,
+    };
+
+    // Store key files (up to 150 files) directly in DB so serverless never loses them
+    const persistedFiles = allFiles.slice(0, 150).map((f) => ({
+      path: f.path,
+      extension: f.extension,
+      size: f.size,
+      content: f.content,
+    }));
+
+    let repoDoc;
+    const repoPayload = {
+      owner: req.user?._id || "demo_guest",
+      repoUrl: `zip-upload:${req.file.originalname}`,
+      repoName,
+      status: "ready",
+      fileTree: tree,
+      files: persistedFiles,
+      projectType: projectDetails.projectType,
+      entryPoint: projectDetails.entryPoint,
+      specDocs,
+      localPath: effectiveRoot,
+    };
+
+    if (isDbConnected()) {
+      repoDoc = await Repo.create(repoPayload);
+    } else {
+      repoDoc = await memoryStore.createRepo(repoPayload);
+    }
+
+    // 4. Precompute and persist AnalysisResult records for instant zero-delay viewing
+    const resultsToSave = [
+      { type: "readme", content: readmeDoc },
+      { type: "architecture", content: architectureMermaid },
+      { type: "agents", content: agentsDoc },
+      { type: "taskBreakdown", content: taskBreakdownDoc },
+      { type: "flowchart", content: flowchartDoc },
+      { type: "functionExplain", content: parsedFunctions },
+    ];
+
+    for (const r of resultsToSave) {
+      if (isDbConnected()) {
+        await AnalysisResult.create({
+          repo: repoDoc._id,
+          owner: repoDoc.owner,
+          type: r.type,
+          content: r.content,
+        });
+      } else {
+        await memoryStore.createAnalysis({
+          repo: repoDoc._id,
+          owner: repoDoc.owner,
+          type: r.type,
+          content: r.content,
+        });
+      }
+    }
+
+    // 5. Automatic GitHub Push & Deployment Link Generation
     let githubPushInfo = null;
     const shouldPush = req.body.pushToGithub === "true" || req.body.pushToGithub === true;
     const githubToken = req.body.githubToken || req.user?.githubToken || process.env.GITHUB_TOKEN;
@@ -108,18 +178,33 @@ async function analyzeZip(req, res, next) {
         const pushResult = await pushCodeToGitHub({
           token: githubToken,
           repoName: req.body.customRepoName || repoName,
-          description: req.body.description || "Documented and exported via ReadMyCode",
+          description: req.body.description || `Documented and exported via ReadMyCode (${projectDetails.projectType})`,
           localPath: effectiveRoot,
+          files: persistedFiles,
+          specDocs,
           isPrivate: req.body.isPrivate === "true" || req.body.isPrivate === true,
         });
+
         repoDoc.repoUrl = pushResult.htmlUrl;
         repoDoc.githubUrl = pushResult.htmlUrl;
         repoDoc.owner = pushResult.owner;
         repoDoc.repoName = pushResult.repoName;
+
+        // Compute 1-click Deployment Links
+        if (projectDetails.projectType === "python") {
+          repoDoc.deployType = "streamlit";
+          repoDoc.deployUrl = `https://share.streamlit.io/deploy?repository=${encodeURIComponent(
+            pushResult.owner + "/" + pushResult.repoName
+          )}&branch=main&mainModule=${encodeURIComponent(projectDetails.entryPoint || "app.py")}`;
+        } else {
+          repoDoc.deployType = "vercel";
+          repoDoc.deployUrl = `https://vercel.com/new/clone?repository-url=${encodeURIComponent(pushResult.htmlUrl)}`;
+        }
+
         await repoDoc.save();
         githubPushInfo = pushResult;
       } catch (pushErr) {
-        logger.warn(`Automatic GitHub push skipped: ${pushErr.message}`);
+        logger.warn(`Automatic GitHub push failed: ${pushErr.message}`);
       }
     }
 
@@ -128,9 +213,12 @@ async function analyzeZip(req, res, next) {
     res.status(201).json({
       repo: repoDoc,
       github: githubPushInfo,
+      deployUrl: repoDoc.deployUrl,
+      deployType: repoDoc.deployType,
+      projectType: projectDetails.projectType,
       message: githubPushInfo
-        ? "ZIP uploaded, analyzed, and pushed to your GitHub account!"
-        : "ZIP uploaded and parsed successfully",
+        ? `ZIP uploaded, analyzed, and pushed to GitHub (${githubPushInfo.htmlUrl})!`
+        : `ZIP uploaded and fully analyzed (${persistedFiles.length} files parsed)!`,
     });
   } catch (err) {
     if (zipPath) fs.unlink(zipPath, () => {});
@@ -151,6 +239,25 @@ async function getRepo(req, res, next) {
       repo = await memoryStore.findRepoById(req.params.id, req.user._id);
     }
     if (!repo) return res.status(404).json({ message: "Repo not found" });
+
+    // Ensure deployUrl and deployType are computed for convenience
+    const ghUrl = repo.repoUrl?.startsWith("http") ? repo.repoUrl : repo.githubUrl;
+    if (ghUrl?.startsWith("http") && !repo.deployUrl) {
+      const ghMatch = ghUrl.match(/github\.com\/([^/]+)\/([^/]+?)(?:\.git|\/|$)/);
+      const isPython = repo.projectType === "python" || (repo.files && repo.files.some((f) => f.extension === ".py"));
+      if (isPython && ghMatch) {
+        repo.deployType = "streamlit";
+        repo.deployUrl = `https://share.streamlit.io/deploy?repository=${encodeURIComponent(
+          ghMatch[1] + "/" + ghMatch[2]
+        )}&branch=${encodeURIComponent(repo.defaultBranch || "main")}&mainModule=${encodeURIComponent(
+          repo.entryPoint || "app.py"
+        )}`;
+      } else {
+        repo.deployType = "vercel";
+        repo.deployUrl = `https://vercel.com/new/clone?repository-url=${encodeURIComponent(ghUrl)}`;
+      }
+    }
+
     res.json({ repo });
   } catch (err) {
     next(err);
@@ -259,9 +366,11 @@ async function pushRepoToGitHub(req, res, next) {
     }
 
     const localPath = repoDoc.get ? repoDoc.get("localPath") : repoDoc.localPath;
-    if (!localPath || !fs.existsSync(localPath)) {
+    const files = repoDoc.files || [];
+
+    if ((!localPath || !fs.existsSync(localPath)) && files.length === 0) {
       return res.status(400).json({
-        message: "Codebase directory is no longer stored locally. Please re-upload the ZIP to push to GitHub.",
+        message: "Codebase files are not available. Please re-upload the ZIP.",
       });
     }
 
@@ -270,21 +379,36 @@ async function pushRepoToGitHub(req, res, next) {
     const pushResult = await pushCodeToGitHub({
       token: githubToken,
       repoName: finalRepoName,
-      description: description || "Documented and exported via ReadMyCode",
-      localPath,
+      description: description || `Documented and exported via ReadMyCode (${repoDoc.projectType || 'general'})`,
+      localPath: localPath && fs.existsSync(localPath) ? localPath : null,
+      files,
       isPrivate: Boolean(isPrivate),
+      specDocs: repoDoc.specDocs || {},
     });
 
     repoDoc.repoUrl = pushResult.htmlUrl;
     repoDoc.githubUrl = pushResult.htmlUrl;
     repoDoc.owner = pushResult.owner;
     repoDoc.repoName = pushResult.repoName;
+
+    if (repoDoc.projectType === "python") {
+      repoDoc.deployType = "streamlit";
+      repoDoc.deployUrl = `https://share.streamlit.io/deploy?repository=${encodeURIComponent(
+        pushResult.owner + "/" + pushResult.repoName
+      )}&branch=main&mainModule=${encodeURIComponent(repoDoc.entryPoint || "app.py")}`;
+    } else {
+      repoDoc.deployType = "vercel";
+      repoDoc.deployUrl = `https://vercel.com/new/clone?repository-url=${encodeURIComponent(pushResult.htmlUrl)}`;
+    }
+
     await repoDoc.save();
 
     res.json({
       success: true,
       message: "Successfully created and pushed repository to your GitHub account!",
       githubUrl: pushResult.htmlUrl,
+      deployUrl: repoDoc.deployUrl,
+      deployType: repoDoc.deployType,
       repo: repoDoc,
     });
   } catch (err) {

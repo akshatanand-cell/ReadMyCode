@@ -5,7 +5,17 @@ import api from '@/services/api';
 import Spinner from '../common/Spinner';
 import { FileText, Copy, Check, Download, Edit3, Save, X } from 'lucide-react';
 
-export default function ReadmeViewer({ repoId, content, onEdit }) {
+export default function ReadmeViewer({
+  repoId,
+  content,
+  onEdit,
+  docTitle = 'README.md',
+  downloadName,
+  fetchPath,
+  spinnerText,
+  icon: IconComponent = FileText,
+  emptyMessage,
+}) {
   const [readme, setReadme] = useState(content || '');
   const [loading, setLoading] = useState(!content && Boolean(repoId));
   const [isEditing, setIsEditing] = useState(false);
@@ -18,19 +28,20 @@ export default function ReadmeViewer({ repoId, content, onEdit }) {
       setReadme(content);
       setLoading(false);
     } else if (repoId) {
-      fetchReadme();
+      fetchDoc();
     }
-  }, [repoId, content]);
+  }, [repoId, content, fetchPath]);
 
-  const fetchReadme = async () => {
+  const fetchDoc = async () => {
     try {
       setLoading(true);
       setFetchError('');
-      const res = await api.get(`/readme/${repoId}`);
-      setReadme(res.data.readme || res.data.result?.content || '');
+      const endpoint = fetchPath || `/readme/${repoId}`;
+      const res = await api.get(endpoint);
+      setReadme(res.data.readme || res.data.content || res.data.result?.content || res.data.agents || res.data.taskBreakdown || '');
     } catch (err) {
       const serverMessage = err.response?.data?.message || err.message;
-      console.error('Failed to fetch README:', serverMessage);
+      console.error(`Failed to fetch ${docTitle}:`, serverMessage);
       setFetchError(serverMessage);
     } finally {
       setLoading(false);
@@ -52,7 +63,7 @@ export default function ReadmeViewer({ repoId, content, onEdit }) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'README.md';
+    a.download = downloadName || docTitle;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -75,9 +86,9 @@ export default function ReadmeViewer({ repoId, content, onEdit }) {
       {/* GitHub-style Toolbar */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-background-secondary/70">
         <div className="flex items-center gap-2.5">
-          <FileText className="w-4 h-4 text-primary" />
-          <span className="font-semibold text-sm text-text-primary">README.md</span>
-          {content && (
+          <IconComponent className="w-4 h-4 text-primary" />
+          <span className="font-semibold text-sm text-text-primary">{docTitle}</span>
+          {Boolean(readme) && (
             <span className="px-2 py-0.5 bg-success/10 text-success border border-success/20 text-xs rounded-full font-medium">
               AI Generated
             </span>
@@ -111,7 +122,7 @@ export default function ReadmeViewer({ repoId, content, onEdit }) {
 
       {fetchError && (
         <div className="mx-4 mt-3 px-4 py-3 bg-red-500/10 border border-red-500/20 rounded-xl text-sm text-red-400">
-          Couldn't load the README: {fetchError}
+          Couldn't load {docTitle}: {fetchError}
         </div>
       )}
 
@@ -119,7 +130,7 @@ export default function ReadmeViewer({ repoId, content, onEdit }) {
       <div className="p-6 sm:p-8">
         {loading ? (
           <div className="flex items-center justify-center py-16">
-            <Spinner text="Generating README documentation..." />
+            <Spinner text={spinnerText || `Generating ${docTitle}...`} />
           </div>
         ) : isEditing ? (
           <textarea
@@ -130,7 +141,7 @@ export default function ReadmeViewer({ repoId, content, onEdit }) {
           />
         ) : (
           <MarkdownRenderer
-            content={readme || '# No README generated yet\n\nClick **Analyze** on the dashboard to generate full documentation for this repository.'}
+            content={readme || emptyMessage || `# No ${docTitle} generated yet\n\nClick **Analyze** on the dashboard to generate full documentation for this repository.`}
           />
         )}
       </div>

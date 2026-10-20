@@ -118,7 +118,7 @@ async function createUser({ name, email, password, githubToken, githubUsername, 
   return user;
 }
 
-async function createRepo({ owner, repoUrl, repoName, status, localPath, fileTree }) {
+async function createRepo({ owner, repoUrl, repoName, status, localPath, fileTree, files, projectType, entryPoint, githubUrl, deployUrl, deployType, specDocs }) {
   const _id = "mem_repo_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
   const repo = {
     _id,
@@ -128,6 +128,13 @@ async function createRepo({ owner, repoUrl, repoName, status, localPath, fileTre
     name: repoName,
     status: status || "ready",
     fileTree: fileTree || [],
+    files: files || [],
+    projectType: projectType || "general",
+    entryPoint: entryPoint || null,
+    githubUrl: githubUrl || null,
+    deployUrl: deployUrl || null,
+    deployType: deployType || null,
+    specDocs: specDocs || {},
     localPath: localPath || null,
     createdAt: new Date(),
     updatedAt: new Date(),

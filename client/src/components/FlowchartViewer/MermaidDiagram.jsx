@@ -36,7 +36,13 @@ const MermaidDiagram = ({ definition, className }) => {
         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui, sans-serif',
       });
 
-      const cleanDef = definition.replace(/^```mermaid\s*/i, '').replace(/```$/g, '').trim();
+      let cleanDef = definition.trim();
+      const fenceMatch = cleanDef.match(/```(?:mermaid)?\s*([\s\S]*?)```/i);
+      if (fenceMatch) {
+        cleanDef = fenceMatch[1].trim();
+      } else {
+        cleanDef = cleanDef.replace(/^```mermaid\s*/i, '').replace(/```$/g, '').trim();
+      }
       const id = `mermaid-node-${Math.random().toString(36).substring(2, 9)}`;
       const { svg: renderedSvg } = await mermaid.render(id, cleanDef);
       setSvg(renderedSvg);

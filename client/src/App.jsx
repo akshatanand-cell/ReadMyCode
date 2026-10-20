@@ -28,6 +28,8 @@ import RepoReadme from '@/pages/repo/RepoReadme';
 import RepoApiDocs from '@/pages/repo/RepoApiDocs';
 import RepoFlowchart from '@/pages/repo/RepoFlowchart';
 import RepoArchitecture from '@/pages/repo/RepoArchitecture';
+import RepoAgents from '@/pages/repo/RepoAgents';
+import RepoTaskBreakdown from '@/pages/repo/RepoTaskBreakdown';
 import RepoFunctions from '@/pages/repo/RepoFunctions';
 import RepoDebugger from '@/pages/repo/RepoDebugger';
 
@@ -87,9 +89,11 @@ function App() {
         {/* Repo detail routes with nested feature views */}
         <Route path="/repo/:id" element={<RepoOverview />} />
         <Route path="/repo/:id/readme" element={<RepoReadme />} />
-        <Route path="/repo/:id/api-docs" element={<RepoApiDocs />} />
-        <Route path="/repo/:id/flowchart" element={<RepoFlowchart />} />
         <Route path="/repo/:id/architecture" element={<RepoArchitecture />} />
+        <Route path="/repo/:id/agents" element={<RepoAgents />} />
+        <Route path="/repo/:id/task-breakdown" element={<RepoTaskBreakdown />} />
+        <Route path="/repo/:id/flowchart" element={<RepoFlowchart />} />
+        <Route path="/repo/:id/api-docs" element={<RepoApiDocs />} />
         <Route path="/repo/:id/functions" element={<RepoFunctions />} />
         <Route path="/repo/:id/debugger" element={<RepoDebugger />} />
       </Route>

@@ -3,35 +3,43 @@ const fs = require("fs");
 const mongoose = require("mongoose");
 const Repo = require("../models/Repo");
 const AnalysisResult = require("../models/AnalysisResult");
-const { walkRepo } = require("../utils/fileWalker");
 const { generateFlowchart } = require("../services/flowchartGenerator");
 const { generateArchitecture } = require("../services/architectureGenerator");
+const { generateArchitectureDoc, generateArchitectureMermaid, generateFlowchartMermaid } = require("../services/specDocGenerator");
 const memoryStore = require("../utils/memoryStore");
-const { fetchRepoHelper, isDbConnected } = require("../utils/repoFetcher");
+const { fetchRepoHelper, getRepoFiles, isDbConnected } = require("../utils/repoFetcher");
 
-const ENTRY_CANDIDATES = ["server.js", "app.js", "index.js", "main.py", "src/main.jsx", "src/App.jsx"];
+const ENTRY_CANDIDATES = ["server.js", "app.js", "index.js", "main.py", "app.py", "src/main.jsx", "src/App.jsx"];
 
-function findEntryFile(localPath) {
+function findEntryFile(files = [], localPath = "") {
   for (const candidate of ENTRY_CANDIDATES) {
-    const full = path.join(localPath, candidate);
-    if (fs.existsSync(full)) return fs.readFileSync(full, "utf-8");
+    const found = files.find((f) => (f.path || "").toLowerCase().endsWith(candidate));
+    if (found) return found.content;
+    if (localPath) {
+      const full = path.join(localPath, candidate);
+      if (fs.existsSync(full)) return fs.readFileSync(full, "utf-8");
+    }
   }
-  return "";
+  return files[0]?.content || "";
 }
 
 async function buildFlowchart(repo) {
+  const allFiles = getRepoFiles(repo);
+  const repoName = repo.repoName || repo.name || "Repository";
   const localPath = repo.get ? repo.get("localPath") : repo.localPath;
-  if (!localPath) {
-    const err = new Error("Repo has not been cloned/parsed yet");
-    err.status = 400;
-    throw err;
+  const tree = allFiles.map((f) => f.path).join("\n");
+  const entryFileContent = findEntryFile(allFiles, localPath);
+
+  let mermaid = "";
+  try {
+    mermaid = await generateFlowchart({ repoName, tree, entryFileContent });
+  } catch (e) {
+    mermaid = generateFlowchartMermaid({ repoName, files: allFiles });
   }
 
-  const allFiles = walkRepo(localPath);
-  const tree = allFiles.map((f) => f.path).join("\n");
-  const entryFileContent = findEntryFile(localPath);
-
-  const mermaid = await generateFlowchart({ repoName: repo.repoName || repo.name || "Repository", tree, entryFileContent });
+  if (!mermaid || mermaid.toLowerCase().includes("expense-tracker")) {
+    mermaid = generateFlowchartMermaid({ repoName, files: allFiles });
+  }
 
   if (isDbConnected()) {
     return AnalysisResult.create({
@@ -51,17 +59,20 @@ async function buildFlowchart(repo) {
 }
 
 async function buildArchitecture(repo) {
-  const localPath = repo.get ? repo.get("localPath") : repo.localPath;
-  if (!localPath) {
-    const err = new Error("Repo has not been cloned/parsed yet");
-    err.status = 400;
-    throw err;
-  }
-
-  const allFiles = walkRepo(localPath);
+  const allFiles = getRepoFiles(repo);
+  const repoName = repo.repoName || repo.name || "Repository";
   const tree = allFiles.map((f) => f.path).join("\n");
 
-  const mermaid = await generateArchitecture({ repoName: repo.repoName || repo.name || "Repository", tree });
+  let mermaid = "";
+  try {
+    mermaid = await generateArchitecture({ repoName, tree });
+  } catch (e) {
+    mermaid = generateArchitectureMermaid({ repoName, files: allFiles });
+  }
+
+  if (!mermaid || mermaid.toLowerCase().includes("expense-tracker")) {
+    mermaid = generateArchitectureMermaid({ repoName, files: allFiles });
+  }
 
   if (isDbConnected()) {
     return AnalysisResult.create({
@@ -82,7 +93,7 @@ async function buildArchitecture(repo) {
 
 async function createFlowchart(req, res, next) {
   try {
-    const repo = await fetchRepoHelper(req.params.repoId, req.user._id);
+    const repo = await fetchRepoHelper(req.params.repoId, req.user?._id);
     if (!repo) return res.status(404).json({ message: "Repo not found" });
 
     const result = await buildFlowchart(repo);
@@ -95,7 +106,7 @@ async function createFlowchart(req, res, next) {
 
 async function getFlowchart(req, res, next) {
   try {
-    const repo = await fetchRepoHelper(req.params.repoId, req.user._id);
+    const repo = await fetchRepoHelper(req.params.repoId, req.user?._id);
     if (!repo) return res.status(404).json({ message: "Repo not found" });
 
     let result;
@@ -116,7 +127,7 @@ async function getFlowchart(req, res, next) {
 
 async function createArchitectureDiagram(req, res, next) {
   try {
-    const repo = await fetchRepoHelper(req.params.repoId, req.user._id);
+    const repo = await fetchRepoHelper(req.params.repoId, req.user?._id);
     if (!repo) return res.status(404).json({ message: "Repo not found" });
 
     const result = await buildArchitecture(repo);
@@ -129,7 +140,7 @@ async function createArchitectureDiagram(req, res, next) {
 
 async function getArchitectureDiagram(req, res, next) {
   try {
-    const repo = await fetchRepoHelper(req.params.repoId, req.user._id);
+    const repo = await fetchRepoHelper(req.params.repoId, req.user?._id);
     if (!repo) return res.status(404).json({ message: "Repo not found" });
 
     let result;

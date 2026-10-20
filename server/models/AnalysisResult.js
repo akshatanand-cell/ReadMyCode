@@ -6,7 +6,7 @@ const analysisResultSchema = new mongoose.Schema(
     owner: { type: mongoose.Schema.Types.Mixed, required: true },
     type: {
       type: String,
-      enum: ["readme", "apiDocs", "flowchart", "architecture", "functionExplain", "debug"],
+      enum: ["readme", "apiDocs", "flowchart", "architecture", "functionExplain", "debug", "agents", "taskBreakdown"],
       required: true,
     },
     // For functionExplain: keyed by file path. For debug: single result. Others: raw content.

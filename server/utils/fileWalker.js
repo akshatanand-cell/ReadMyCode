@@ -11,6 +11,8 @@ const IGNORE_DIRS = new Set([
 const CODE_EXTENSIONS = new Set([
   ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs",
   ".py", ".java", ".go", ".rb", ".php", ".css", ".json", ".md",
+  ".c", ".cpp", ".cc", ".cxx", ".h", ".hpp", ".cs", ".rs", ".kt",
+  ".html", ".sql", ".sh", ".bash", ".yml", ".yaml", ".txt"
 ]);
 
 const MAX_FILE_SIZE = 500 * 1024; // 500KB - skip huge generated files

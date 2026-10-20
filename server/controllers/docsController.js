@@ -1,25 +1,17 @@
 const mongoose = require("mongoose");
 const Repo = require("../models/Repo");
 const AnalysisResult = require("../models/AnalysisResult");
-const { walkRepo } = require("../utils/fileWalker");
 const { generateApiDocs } = require("../services/apiDocGenerator");
+const { generateAgentsDoc, generateTaskBreakdownDoc } = require("../services/specDocGenerator");
 const memoryStore = require("../utils/memoryStore");
-const { fetchRepoHelper, isDbConnected } = require("../utils/repoFetcher");
+const { fetchRepoHelper, getRepoFiles, isDbConnected } = require("../utils/repoFetcher");
 
-// Heuristic: files likely to define API routes/controllers/server logic
 function isRouteLikeFile(filePath) {
   return /route|controller|api|server|app|index|main/i.test(filePath) && /\.(js|ts|py|go|java)$/.test(filePath);
 }
 
 async function buildDocs(repo) {
-  const localPath = repo.get ? repo.get("localPath") : repo.localPath;
-  if (!localPath) {
-    const err = new Error("Repo has not been cloned/parsed yet");
-    err.status = 400;
-    throw err;
-  }
-
-  const allFiles = walkRepo(localPath, { onlyCode: true });
+  const allFiles = getRepoFiles(repo);
   let routeFiles = allFiles.filter((f) => isRouteLikeFile(f.path));
 
   if (routeFiles.length === 0) {
@@ -53,7 +45,7 @@ async function buildDocs(repo) {
 
 async function createApiDocs(req, res, next) {
   try {
-    const repo = await fetchRepoHelper(req.params.repoId, req.user._id);
+    const repo = await fetchRepoHelper(req.params.repoId, req.user?._id);
     if (!repo) return res.status(404).json({ message: "Repo not found" });
 
     const result = await buildDocs(repo);
@@ -66,7 +58,7 @@ async function createApiDocs(req, res, next) {
 
 async function getApiDocs(req, res, next) {
   try {
-    const repo = await fetchRepoHelper(req.params.repoId, req.user._id);
+    const repo = await fetchRepoHelper(req.params.repoId, req.user?._id);
     if (!repo) return res.status(404).json({ message: "Repo not found" });
 
     let result;
@@ -85,4 +77,52 @@ async function getApiDocs(req, res, next) {
   }
 }
 
-module.exports = { createApiDocs, getApiDocs };
+async function getAgentsDoc(req, res, next) {
+  try {
+    const repo = await fetchRepoHelper(req.params.repoId, req.user?._id);
+    if (!repo) return res.status(404).json({ message: "Repo not found" });
+
+    let result;
+    if (isDbConnected()) {
+      result = await AnalysisResult.findOne({ repo: repo._id, type: "agents" }).sort({ createdAt: -1 });
+    } else {
+      result = await memoryStore.findAnalysis(repo._id, "agents");
+    }
+
+    let content = result?.content || repo.specDocs?.agents;
+    if (!content) {
+      const allFiles = getRepoFiles(repo);
+      content = generateAgentsDoc({ repoName: repo.repoName || repo.name || "Repository", files: allFiles });
+    }
+
+    res.json({ content, agents: content });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function getTaskBreakdownDoc(req, res, next) {
+  try {
+    const repo = await fetchRepoHelper(req.params.repoId, req.user?._id);
+    if (!repo) return res.status(404).json({ message: "Repo not found" });
+
+    let result;
+    if (isDbConnected()) {
+      result = await AnalysisResult.findOne({ repo: repo._id, type: "taskBreakdown" }).sort({ createdAt: -1 });
+    } else {
+      result = await memoryStore.findAnalysis(repo._id, "taskBreakdown");
+    }
+
+    let content = result?.content || repo.specDocs?.taskBreakdown;
+    if (!content) {
+      const allFiles = getRepoFiles(repo);
+      content = generateTaskBreakdownDoc({ repoName: repo.repoName || repo.name || "Repository", files: allFiles });
+    }
+
+    res.json({ content, taskBreakdown: content });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { createApiDocs, getApiDocs, getAgentsDoc, getTaskBreakdownDoc };

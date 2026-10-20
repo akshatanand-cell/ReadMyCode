@@ -13,6 +13,9 @@ import {
   Copy,
   Check,
   FolderGit2,
+  Bot,
+  ListTodo,
+  Rocket,
 } from 'lucide-react';
 import { useRepo } from '@/context/RepoContext';
 import { cn } from '@/utils/helpers';
@@ -23,9 +26,11 @@ import ProgressBar from './ProgressBar';
 
 const repoTabs = [
   { path: 'readme', label: 'README', icon: FileText },
-  { path: 'api-docs', label: 'API Docs', icon: Code2 },
-  { path: 'flowchart', label: 'Flowchart', icon: GitBranch },
   { path: 'architecture', label: 'Architecture', icon: Network },
+  { path: 'agents', label: 'Agents', icon: Bot },
+  { path: 'task-breakdown', label: 'Tasks', icon: ListTodo },
+  { path: 'flowchart', label: 'Flowchart', icon: GitBranch },
+  { path: 'api-docs', label: 'API Docs', icon: Code2 },
   { path: 'functions', label: 'Functions', icon: FunctionSquare },
   { path: 'debugger', label: 'Debugger', icon: Bug },
 ];
@@ -47,6 +52,27 @@ const DashboardLayout = () => {
 
   const currentTab = location.pathname.split('/').pop();
   const isRepoPage = id && location.pathname.includes('/repo/');
+
+  const ghUrl = currentRepo?.repoUrl?.startsWith('http') ? currentRepo.repoUrl : currentRepo?.githubUrl;
+  const isPython =
+    currentRepo?.projectType === 'python' ||
+    currentRepo?.language?.toLowerCase() === 'python' ||
+    currentRepo?.files?.some?.((f) => f.extension === '.py');
+
+  const deployType = currentRepo?.deployType || (isPython ? 'streamlit' : 'vercel');
+  let deployUrl = currentRepo?.deployUrl;
+  if (!deployUrl && ghUrl?.startsWith('http')) {
+    const ghMatch = ghUrl.match(/github\.com\/([^/]+)\/([^/]+?)(?:\.git|\/|$)/);
+    if (isPython && ghMatch) {
+      deployUrl = `https://share.streamlit.io/deploy?repository=${encodeURIComponent(
+        ghMatch[1] + '/' + ghMatch[2]
+      )}&branch=${encodeURIComponent(currentRepo.defaultBranch || 'main')}&mainModule=${encodeURIComponent(
+        currentRepo.entryPoint || 'app.py'
+      )}`;
+    } else {
+      deployUrl = `https://vercel.com/new/clone?repository-url=${encodeURIComponent(ghUrl)}`;
+    }
+  }
 
   const handleCopyUrl = () => {
     const url = currentRepo?.repoUrl || currentRepo?.githubUrl || window.location.href;
@@ -105,7 +131,7 @@ const DashboardLayout = () => {
                     </div>
                   </div>
 
-                  {/* GitHub Action Buttons (Star, Copy URL, External Link) */}
+                  {/* GitHub Action Buttons (Star, Copy URL, External Link, 1-Click Deploy) */}
                   <div className="flex items-center gap-2 self-start sm:self-auto">
                     <button
                       onClick={handleStarToggle}
@@ -134,16 +160,39 @@ const DashboardLayout = () => {
                     </button>
 
                     {((currentRepo.repoUrl || currentRepo.githubUrl)?.startsWith('http')) ? (
-                      <a
-                        href={currentRepo.repoUrl || currentRepo.githubUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-background-secondary hover:bg-border/40 text-text-secondary hover:text-text-primary text-xs font-medium transition-all shadow-sm"
-                        title="Open on GitHub"
-                      >
-                        <ExternalLink className="w-3.5 h-3.5 text-primary" />
-                        <span className="hidden sm:inline">GitHub</span>
-                      </a>
+                      <>
+                        <a
+                          href={currentRepo.repoUrl || currentRepo.githubUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-background-secondary hover:bg-border/40 text-text-secondary hover:text-text-primary text-xs font-medium transition-all shadow-sm"
+                          title="Open on GitHub"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5 text-primary" />
+                          <span className="hidden sm:inline">GitHub</span>
+                        </a>
+
+                        {deployUrl && (
+                          <a
+                            href={deployUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={cn(
+                              'flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all shadow-sm',
+                              deployType === 'streamlit'
+                                ? 'bg-rose-500/10 border-rose-500/30 text-rose-500 dark:text-rose-400 hover:bg-rose-500/20'
+                                : 'bg-primary/10 border-primary/30 text-primary hover:bg-primary/20'
+                            )}
+                            title={deployType === 'streamlit' ? '1-Click Deploy to Streamlit Cloud' : '1-Click Deploy to Vercel'}
+                          >
+                            <Rocket className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline">
+                              {deployType === 'streamlit' ? 'Deploy Streamlit' : 'Deploy Vercel'}
+                            </span>
+                            <ExternalLink className="w-3 h-3 opacity-60" />
+                          </a>
+                        )}
+                      </>
                     ) : (
                       <button
                         onClick={() => navigate(`/repo/${id}`)}
