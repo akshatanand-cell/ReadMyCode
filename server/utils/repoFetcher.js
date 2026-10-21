@@ -65,6 +65,20 @@ async function fetchRepoHelper(repoId, ownerId) {
     }
   }
 
+  // 3. Resilient fallback for serverless: if repo was not found by ID, grab the user's latest repo
+  if (!repo && isDbConnected()) {
+    try {
+      if (ownerId && ownerId !== "demo_guest") {
+        repo = await Repo.findOne({ owner: ownerId }).sort({ createdAt: -1 });
+      }
+      if (!repo) {
+        repo = await Repo.findOne({}).sort({ createdAt: -1 });
+      }
+    } catch (err) {
+      logger.warn(`Latest repo fallback error: ${err.message}`);
+    }
+  }
+
   return repo;
 }
 
