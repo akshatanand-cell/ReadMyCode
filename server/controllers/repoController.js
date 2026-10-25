@@ -109,8 +109,9 @@ async function analyzeRepo(req, res, next) {
           content: r.content,
         });
       } else {
-        await memoryStore.createAnalysisResult({
+        await memoryStore.createAnalysis({
           repo: repoDoc._id,
+          owner: repoDoc.owner,
           type: r.type,
           content: r.content,
         });

@@ -201,6 +201,7 @@ module.exports = {
   findRepoById,
   listUserRepos,
   createAnalysis,
+  createAnalysisResult: createAnalysis,
   findAnalysis,
   saveStore,
 };
