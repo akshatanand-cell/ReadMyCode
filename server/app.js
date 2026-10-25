@@ -76,6 +76,9 @@ app.get("/api/health", (req, res) => {
     status: "ok",
     uptime: process.uptime(),
     db: mongoose.connection.readyState === 1 ? "mongo" : "memory",
+    hasMongoUri: Boolean(process.env.MONGO_URI && !process.env.MONGO_URI.includes("127.0.0.1")),
+    dbHost: mongoose.connection.host || null,
+    lastDbError: global.__lastDbError || null,
   });
 });
 
