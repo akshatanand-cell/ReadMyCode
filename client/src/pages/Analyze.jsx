@@ -37,7 +37,33 @@ import { MAX_FILE_SIZE, SUPPORTED_ARCHIVE_TYPES } from '@/utils/constants';
 const Analyze = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { uploadFromGitHub, uploadFromZip, isLoading, progress } = useRepoAnalysis();
+  const {
+    uploadFromGitHub,
+    uploadFromZip,
+    isLoading,
+    progress,
+    currentStep,
+    steps,
+    errorDetails,
+    clearError,
+  } = useRepoAnalysis();
+  const [lastAnalyzed, setLastAnalyzed] = useState(null);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('readmycode_last_analyzed_repo');
+      if (raw) setLastAnalyzed(JSON.parse(raw));
+    } catch (_e) {}
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const paramUrl = params.get('url');
+    if (paramUrl) {
+      setGithubUrl(paramUrl);
+      setShowManualUrl(true);
+    }
+  }, []);
   const [activeTab, setActiveTab] = useState('github');
   const [githubUrl, setGithubUrl] = useState('');
   const [dragActive, setDragActive] = useState(false);
@@ -237,6 +263,29 @@ const Analyze = () => {
           </p>
         </motion.div>
 
+        {lastAnalyzed && (
+          <div className="mb-6 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0">
+                <CheckCircle className="w-4 h-4 text-emerald-400" />
+              </div>
+              <div>
+                <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-400 font-semibold">
+                  Saved Analysis Session
+                </span>
+                <p className="text-sm font-semibold text-text-primary">{lastAnalyzed.name}</p>
+              </div>
+            </div>
+            <Button
+              size="sm"
+              onClick={() => navigate(`/repo/${lastAnalyzed.id}`)}
+              className="bg-emerald-500 hover:bg-emerald-600 text-black font-semibold border-none shrink-0"
+            >
+              Resume Workspace &rarr;
+            </Button>
+          </div>
+        )}
+
         <Card className="mb-8">
           <div className="flex items-center gap-1 p-1 bg-background-secondary rounded-lg mb-6">
             <button
@@ -270,14 +319,79 @@ const Analyze = () => {
                 exit={{ opacity: 0, x: 20 }}
                 className="space-y-5"
               >
-                {/* Global Progress Bar when cloning/analyzing */}
+                {/* Step-by-Step Progress Display */}
                 {(isLoading || importingRepoUrl) && (
-                  <div className="py-4 px-4 bg-background-secondary rounded-xl border border-border">
+                  <div className="p-5 bg-card border border-emerald-500/30 rounded-2xl shadow-xl space-y-4">
+                    <div className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                        <span className="font-semibold text-text-primary text-sm">
+                          {steps && steps[currentStep] ? steps[currentStep].title : 'Analyzing Codebase...'}
+                        </span>
+                      </div>
+                      <span className="font-mono text-emerald-400 font-bold text-sm">{progress}%</span>
+                    </div>
+
                     <ProgressBar progress={progress} variant="gradient" />
-                    <p className="text-center text-sm text-text-secondary mt-2 flex items-center justify-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                      Cloning repository and generating AI documentation...
-                    </p>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2">
+                      {steps && steps.map((st, idx) => {
+                        const isDone = idx < currentStep;
+                        const isCurrent = idx === currentStep;
+                        return (
+                          <div key={st.id} className="flex items-start gap-2.5 p-2 rounded-lg bg-background-secondary/60 border border-border/50 text-xs">
+                            <div className="mt-0.5 shrink-0">
+                              {isDone ? (
+                                <CheckCircle className="w-4 h-4 text-emerald-400" />
+                              ) : isCurrent ? (
+                                <Loader2 className="w-4 h-4 text-emerald-400 animate-spin" />
+                              ) : (
+                                <div className="w-4 h-4 rounded-full border border-zinc-700 bg-zinc-900" />
+                              )}
+                            </div>
+                            <div>
+                              <p className={cn("font-medium", isCurrent ? "text-emerald-400 font-semibold" : isDone ? "text-text-primary" : "text-text-muted")}>
+                                {st.title}
+                              </p>
+                              <p className="text-[11px] text-text-muted leading-tight mt-0.5">{st.desc}</p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Categorized Error Alert */}
+                {errorDetails && (
+                  <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-2xl space-y-3">
+                    <div className="flex items-start gap-3">
+                      <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <h4 className="text-sm font-bold text-red-400">{errorDetails.title}</h4>
+                        <p className="text-xs text-text-secondary mt-1 leading-relaxed">{errorDetails.message}</p>
+                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                          {errorDetails.actionType === 'token' && (
+                            <Button size="sm" onClick={() => setIsGithubModalOpen(true)} className="bg-emerald-500 text-black font-semibold">
+                              Add GitHub Token
+                            </Button>
+                          )}
+                          {errorDetails.actionType === 'zip' && (
+                            <Button size="sm" onClick={() => setActiveTab('zip')} variant="secondary">
+                              Upload ZIP File
+                            </Button>
+                          )}
+                          {errorDetails.actionType === 'example' && (
+                            <Button size="sm" onClick={() => { setGithubUrl('https://github.com/expressjs/express'); clearError(); }} variant="secondary">
+                              Test with Express.js
+                            </Button>
+                          )}
+                          <Button size="sm" variant="ghost" onClick={clearError}>
+                            Dismiss
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
 
@@ -544,11 +658,36 @@ const Analyze = () => {
                       )}
                     </div>
 
-                    <Button
-                      type="submit"
-                      isLoading={isLoading}
-                      disabled={!githubUrl.trim()}
-                      className="w-full text-sm font-semibold"
+                    <div className="flex flex-wrap items-center gap-2 pt-1 pb-3 text-xs text-text-muted">
+                        <span>Try an example:</span>
+                        <button
+                          type="button"
+                          onClick={() => { setGithubUrl('https://github.com/expressjs/express'); setUrlError(''); }}
+                          className="px-2 py-0.5 rounded-md bg-card border border-border hover:border-emerald-500/50 hover:text-emerald-400 font-mono text-[11px] transition-colors"
+                        >
+                          expressjs/express
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setGithubUrl('https://github.com/fastapi/fastapi'); setUrlError(''); }}
+                          className="px-2 py-0.5 rounded-md bg-card border border-border hover:border-emerald-500/50 hover:text-emerald-400 font-mono text-[11px] transition-colors"
+                        >
+                          fastapi/fastapi
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setGithubUrl('https://github.com/facebook/react'); setUrlError(''); }}
+                          className="px-2 py-0.5 rounded-md bg-card border border-border hover:border-emerald-500/50 hover:text-emerald-400 font-mono text-[11px] transition-colors"
+                        >
+                          facebook/react
+                        </button>
+                      </div>
+
+                      <Button
+                        type="submit"
+                        isLoading={isLoading}
+                        disabled={!githubUrl.trim()}
+                        className="w-full text-sm font-semibold min-h-[44px]" 
                       rightIcon={<ArrowRight className="w-4 h-4" />}
                     >
                       Analyze Public Repository
