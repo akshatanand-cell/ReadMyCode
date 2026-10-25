@@ -32,13 +32,17 @@ async function connectDB() {
     }
   }
 
+  const isProduction = process.env.NODE_ENV === "production" || !!process.env.VERCEL;
+  const connectOptions = {
+    serverSelectionTimeoutMS: 5000,
+    bufferCommands: false,
+    maxPoolSize: isProduction ? 5 : 10,
+  };
+
   // 1. Try primary configured MONGO_URI
   if (MONGO_URI && MONGO_URI.startsWith("mongodb")) {
     try {
-      cachedPromise = mongoose.connect(MONGO_URI, {
-        serverSelectionTimeoutMS: 5000,
-        bufferCommands: false,
-      });
+      cachedPromise = mongoose.connect(MONGO_URI, connectOptions);
       await cachedPromise;
       logger.success(`MongoDB connected via Primary URI: ${mongoose.connection.host}`);
       return mongoose.connection;
@@ -52,8 +56,8 @@ async function connectDB() {
   if (DIRECT_ATLAS_URI && DIRECT_ATLAS_URI.startsWith("mongodb")) {
     try {
       cachedPromise = mongoose.connect(DIRECT_ATLAS_URI, {
+        ...connectOptions,
         serverSelectionTimeoutMS: 6000,
-        bufferCommands: false,
       });
       await cachedPromise;
       logger.success(`MongoDB connected via Direct Replica Set: ${mongoose.connection.host}`);
@@ -64,8 +68,14 @@ async function connectDB() {
     }
   }
 
-  // 3. Fallback to instant MemoryStore
-  logger.info("Operating with instant zero-latency MemoryStore.");
+  // 3. In production / serverless environments, fail fast instead of silently running on ephemeral memory
+  if (isProduction) {
+    logger.error("Production DB connection failed or MONGO_URI not configured in environment.");
+    throw new Error("DB_UNAVAILABLE");
+  }
+
+  // 4. Fallback to instant MemoryStore in local development only
+  logger.info("Operating with instant zero-latency MemoryStore (local development only).");
 }
 
 module.exports = connectDB;

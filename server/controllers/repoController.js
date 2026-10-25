@@ -140,6 +140,41 @@ async function analyzeZip(req, res, next) {
     const extractDir = zipPath.replace(/\.zip$/i, "");
 
     const zip = new AdmZip(zipPath);
+    const zipEntries = zip.getEntries();
+
+    // Protection: Zip bomb (max files count & max uncompressed size) and Zip Slip (path traversal)
+    const MAX_FILES = 2000;
+    const MAX_TOTAL_SIZE = 100 * 1024 * 1024; // 100 MB max uncompressed
+    let totalUncompressedSize = 0;
+
+    if (zipEntries.length > MAX_FILES) {
+      if (zipPath) fs.unlink(zipPath, () => {});
+      return res.status(400).json({
+        message: `ZIP contains too many files (${zipEntries.length} > ${MAX_FILES} maximum allowed).`,
+      });
+    }
+
+    const resolvedExtractDir = path.resolve(extractDir);
+
+    for (const entry of zipEntries) {
+      totalUncompressedSize += entry.header.size;
+      if (totalUncompressedSize > MAX_TOTAL_SIZE) {
+        if (zipPath) fs.unlink(zipPath, () => {});
+        return res.status(400).json({
+          message: "ZIP uncompressed content exceeds the 100MB safety limit.",
+        });
+      }
+
+      // Check for path traversal / zip slip
+      const targetPath = path.resolve(resolvedExtractDir, entry.entryName);
+      if (!targetPath.startsWith(resolvedExtractDir + path.sep) && targetPath !== resolvedExtractDir) {
+        if (zipPath) fs.unlink(zipPath, () => {});
+        return res.status(400).json({
+          message: "ZIP archive contains an illegal relative path (zip slip security violation).",
+        });
+      }
+    }
+
     zip.extractAllTo(extractDir, true);
 
     const entries = fs.readdirSync(extractDir, { withFileTypes: true });
@@ -269,6 +304,7 @@ async function analyzeZip(req, res, next) {
       }
     }
 
+    cleanupRepo(extractDir);
     fs.unlink(zipPath, () => {});
 
     res.status(201).json({
@@ -282,6 +318,7 @@ async function analyzeZip(req, res, next) {
         : `ZIP uploaded and fully analyzed (${persistedFiles.length} files parsed)!`,
     });
   } catch (err) {
+    if (extractDir) cleanupRepo(extractDir);
     if (zipPath) fs.unlink(zipPath, () => {});
     logger.error(`analyzeZip failed: ${err.message}`);
     next(err);

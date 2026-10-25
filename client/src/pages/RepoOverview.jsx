@@ -121,7 +121,9 @@ const RepoOverview = () => {
     }
   };
 
-  if (isLoading) {
+  const isRepoLoading = isLoading || !currentRepo || (String(currentRepo._id ?? currentRepo.id) !== String(id));
+
+  if (isRepoLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <Spinner text="Loading repository..." />
@@ -339,7 +341,7 @@ const RepoOverview = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.04 }}
                 >
-                  <Link to={`/repo/${id}/${tab.path}`}>
+                  <Link to={`/repo/${id}/${tab.path}`} className="block h-full">
                     <Card hover glow className="h-full border border-border bg-card backdrop-blur-xl hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/10 group transition-all duration-300">
                       <div className="flex items-start gap-3.5">
                         <div className="w-10 h-10 bg-primary/10 border border-primary/25 rounded-xl flex items-center justify-center group-hover:scale-110 group-hover:bg-primary transition-all duration-300 shadow-md shrink-0">

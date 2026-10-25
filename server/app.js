@@ -1,9 +1,9 @@
 const express = require("express");
 const cors = require("cors");
 const morgan = require("morgan");
+const mongoose = require("mongoose");
 const { CLIENT_URL, NODE_ENV } = require("./config/env");
 const { notFound, errorHandler } = require("./middleware/errorHandler");
-const { createRateLimiter } = require("./middleware/rateLimiter");
 
 const authRoutes = require("./routes/authRoutes");
 const repoRoutes = require("./routes/repoRoutes");
@@ -15,30 +15,36 @@ const dashboardRoutes = require("./routes/dashboardRoutes");
 
 const app = express();
 
-// Strict CORS: allow custom domain, preview domains, and configured client URLs
-const allowedOrigins = [
-  "https://readmycode.vercel.app",
-  "https://read-my-code.vercel.app",
-  CLIENT_URL,
-  "http://localhost:5173",
-  "http://localhost:3000",
-].filter(Boolean);
+// Trust reverse proxy (Vercel, AWS, Cloudflare) so req.ip and rate limiters resolve real client IPs
+app.set("trust proxy", 1);
+
+// Strict CORS: allow custom domain, canonical Vercel domains, and configured client URL
+const allowedOriginSet = new Set(
+  [
+    "https://readmycode.vercel.app",
+    "https://read-my-code.vercel.app",
+    CLIENT_URL,
+    NODE_ENV !== "production" ? "http://localhost:5173" : null,
+    NODE_ENV !== "production" ? "http://localhost:3000" : null,
+  ].filter(Boolean)
+);
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (curl, mobile apps, server-to-server)
+      // Allow requests with no origin (curl, server-to-server, mobile)
       if (!origin) return callback(null, true);
 
-      // Check allowed list or Vercel preview deploys for this project
-      const isAllowed =
-        allowedOrigins.includes(origin) ||
-        /^https:\/\/readmycode(-[a-z0-9-]+)?\.vercel\.app$/.test(origin) ||
-        /^https:\/\/read-my-code(-[a-z0-9-]+)?\.vercel\.app$/.test(origin);
-
-      if (isAllowed) {
+      // Check exact allowlist
+      if (allowedOriginSet.has(origin)) {
         return callback(null, true);
       }
+
+      // Allow official Vercel preview deploys for this project
+      if (/^https:\/\/readmycode(-[a-z0-9]+)*-akshat[a-z0-9-]*\.vercel\.app$/.test(origin)) {
+        return callback(null, true);
+      }
+
       return callback(new Error(`CORS blocked: Origin ${origin} is not authorized.`));
     },
     credentials: true,
@@ -48,13 +54,6 @@ app.use(
 app.use(express.json({ limit: "5mb" }));
 app.use(express.urlencoded({ extended: true, limit: "5mb" }));
 if (NODE_ENV !== "test") app.use(morgan("dev"));
-
-// API Rate Limiter to protect AI endpoints and prevent quota draining
-const analysisLimiter = createRateLimiter({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 20, // 20 analyses per IP per 15 minutes
-  message: "Analysis request quota reached. Please wait a few minutes or provide your GitHub Personal Access Token.",
-});
 
 app.get("/", (req, res) => {
   res.send(`
@@ -72,10 +71,16 @@ app.get("/", (req, res) => {
   `);
 });
 
-app.get("/api/health", (req, res) => res.json({ status: "ok", uptime: process.uptime() }));
+app.get("/api/health", (req, res) => {
+  res.json({
+    status: "ok",
+    uptime: process.uptime(),
+    db: mongoose.connection.readyState === 1 ? "mongo" : "memory",
+  });
+});
 
 app.use("/api/auth", authRoutes);
-app.use("/api/repos", analysisLimiter, repoRoutes);
+app.use("/api/repos", repoRoutes);
 app.use("/api/readme", readmeRoutes);
 app.use("/api/docs", docsRoutes);
 app.use("/api/diagrams", diagramRoutes);

@@ -14,8 +14,9 @@ function createRateLimiter(options = {}) {
   const message = options.message || "Too many analysis requests. Please wait a few minutes before trying again.";
 
   return (req, res, next) => {
-    // Determine client IP from headers (behind Vercel/proxy) or connection
+    // When trust proxy is enabled, req.ip resolves to the true client IP
     const ip =
+      req.ip ||
       req.headers["x-forwarded-for"]?.split(",")[0]?.trim() ||
       req.socket?.remoteAddress ||
       "unknown-ip";
@@ -56,4 +57,16 @@ function createRateLimiter(options = {}) {
   };
 }
 
-module.exports = { createRateLimiter };
+const analysisLimiter = createRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: "Repository analysis quota reached. Please wait a few minutes or provide your GitHub Personal Access Token.",
+});
+
+const aiLimiter = createRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  message: "AI document generation quota reached. Please wait a few minutes before generating more documentation.",
+});
+
+module.exports = { createRateLimiter, analysisLimiter, aiLimiter };
