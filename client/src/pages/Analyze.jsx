@@ -157,8 +157,15 @@ const Analyze = () => {
     setImportingRepoUrl(repoUrl);
     try {
       const result = await uploadFromGitHub(repoUrl);
-      const repoId = result?._id || result?.id || result?.repo?._id || result?.repo?.id;
-      if (repoId) navigate(`/repo/${repoId}`);
+      const repoObj = result?.repo || result;
+      const repoId = repoObj?._id || repoObj?.id;
+      if (repoObj && repoId) {
+        try {
+          localStorage.setItem(`rmc_repo_${repoId}`, JSON.stringify(repoObj));
+          localStorage.setItem('readmycode_last_analyzed_full_repo', JSON.stringify(repoObj));
+        } catch (_e) {}
+        navigate(`/repo/${repoId}`);
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -179,8 +186,15 @@ const Analyze = () => {
       return;
     }
     const result = await uploadFromGitHub(githubUrl);
-    const repoId = result?._id || result?.id || result?.repo?._id || result?.repo?.id;
-    if (repoId) navigate(`/repo/${repoId}`);
+    const repoObj = result?.repo || result;
+    const repoId = repoObj?._id || repoObj?.id;
+    if (repoObj && repoId) {
+      try {
+        localStorage.setItem(`rmc_repo_${repoId}`, JSON.stringify(repoObj));
+        localStorage.setItem('readmycode_last_analyzed_full_repo', JSON.stringify(repoObj));
+      } catch (_e) {}
+      navigate(`/repo/${repoId}`);
+    }
   };
 
   const handleDrag = (e) => {
@@ -222,8 +236,15 @@ const Analyze = () => {
       customRepoName: customRepoName || selectedFile.name.replace(/\.zip$/i, ''),
       isPrivate,
     });
-    const repoId = result?._id || result?.id || result?.repo?._id || result?.repo?.id;
-    if (repoId) navigate(`/repo/${repoId}`);
+    const repoObj = result?.repo || result;
+    const repoId = repoObj?._id || repoObj?.id;
+    if (repoObj && repoId) {
+      try {
+        localStorage.setItem(`rmc_repo_${repoId}`, JSON.stringify(repoObj));
+        localStorage.setItem('readmycode_last_analyzed_full_repo', JSON.stringify(repoObj));
+      } catch (_e) {}
+      navigate(`/repo/${repoId}`);
+    }
   };
 
   const [recentRepos, setRecentRepos] = useState([]);

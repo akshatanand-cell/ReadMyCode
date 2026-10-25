@@ -338,12 +338,18 @@ async function getRepo(req, res, next) {
       repo = await memoryStore.findRepoById(req.params.id, req.user._id);
     }
 
-    if (!repo && isDbConnected()) {
-      if (req.user?._id && req.user._id !== "demo_guest") {
-        repo = await Repo.findOne({ owner: req.user._id }).sort({ createdAt: -1 });
-      }
-      if (!repo) {
-        repo = await Repo.findOne({}).sort({ createdAt: -1 });
+    if (!repo) {
+      if (isDbConnected()) {
+        if (req.user?._id && req.user._id !== "demo_guest") {
+          repo = await Repo.findOne({ owner: req.user._id }).sort({ createdAt: -1 });
+        }
+        if (!repo) {
+          repo = await Repo.findOne({}).sort({ createdAt: -1 });
+        }
+      } else {
+        if (memoryStore.memoryDb.repos.size > 0) {
+          repo = Array.from(memoryStore.memoryDb.repos.values()).pop();
+        }
       }
     }
 

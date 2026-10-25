@@ -15,12 +15,36 @@ export function RepoProvider({ children }) {
   const fetchRepoDetails = useCallback(async (id) => {
     if (!id || id === 'undefined') return null;
     setIsLoading(true);
+
+    // 1. Instant cache check to eliminate blank screen & latency
+    let cachedRepo = null;
+    try {
+      const raw = localStorage.getItem(`rmc_repo_${id}`) || localStorage.getItem('readmycode_last_analyzed_full_repo');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && (String(parsed._id || parsed.id) === String(id) || !parsed._id)) {
+          cachedRepo = parsed;
+          setCurrentRepo(parsed);
+        }
+      }
+    } catch (_e) {}
+
     try {
       const response = await repoAPI.getById(id);
       const repoObj = response.data?.repo || response.data;
-      setCurrentRepo(repoObj);
-      return repoObj;
+      if (repoObj) {
+        setCurrentRepo(repoObj);
+        try {
+          localStorage.setItem(`rmc_repo_${id}`, JSON.stringify(repoObj));
+          localStorage.setItem(`rmc_repo_${repoObj._id || repoObj.id}`, JSON.stringify(repoObj));
+          localStorage.setItem('readmycode_last_analyzed_full_repo', JSON.stringify(repoObj));
+        } catch (_e) {}
+        return repoObj;
+      }
     } catch (error) {
+      if (cachedRepo) {
+        return cachedRepo;
+      }
       toast.error('Failed to fetch repository');
       return null;
     } finally {
