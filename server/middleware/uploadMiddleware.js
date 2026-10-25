@@ -21,10 +21,12 @@ function fileFilter(req, file, cb) {
   }
 }
 
+// Vercel serverless request body is capped at 4.5 MB.
+// Files exceeding 4.5 MB should be analyzed via public GitHub URL.
 const upload = multer({
   storage,
   fileFilter,
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB cap
+  limits: { fileSize: 4.5 * 1024 * 1024 }, // 4.5MB serverless limit
 });
 
 module.exports = upload;

@@ -27,7 +27,10 @@ function generateFallbackContent(prompt, type) {
   const repoName = extractRepoName(prompt);
 
   if (type === "readme" || lower.includes("readme")) {
-    return `# ${repoName} Overview
+    return `> [!NOTE]
+> **Generated via Static AST Analysis (AI Fallback)**: Automated structural documentation derived directly from codebase syntax trees.
+
+# ${repoName} Overview
 
 ## Description
 ${repoName} is an automated high-performance software system designed with modular component architecture, robust data pipelines, and responsive interface workflows.

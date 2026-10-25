@@ -108,10 +108,10 @@ const Footer = () => {
             <div className="p-3 bg-background-secondary border border-border rounded-xl space-y-1.5">
               <div className="flex items-center gap-1.5 text-emerald-400 font-medium text-[11px]">
                 <Shield className="w-3.5 h-3.5" />
-                <span>Zero Code Retention</span>
+                <span>Transient Code Processing</span>
               </div>
               <p className="text-[11px] text-text-muted leading-relaxed">
-                We don't store your code. Repositories are cloned ephemerally to transient memory and purged immediately after documentation generation.
+                We delete cloned source code immediately after analysis. Generated documentation and architecture specs are saved to your account.
               </p>
             </div>
           </div>

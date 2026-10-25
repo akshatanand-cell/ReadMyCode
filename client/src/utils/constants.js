@@ -87,8 +87,8 @@ export const FILE_EXTENSIONS = {
   dockerfile: 'Dockerfile',
 };
 
-export const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
-export const SUPPORTED_ARCHIVE_TYPES = ['.zip', '.tar.gz', '.tar'];
+export const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB Vercel serverless payload limit
+export const SUPPORTED_ARCHIVE_TYPES = ['.zip'];
 
 export const THEME_COLORS = {
   background: '#0B1120',

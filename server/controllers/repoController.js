@@ -25,6 +25,7 @@ function isDbConnected() {
 }
 
 async function analyzeRepo(req, res, next) {
+  let localPath;
   try {
     const { repoUrl } = req.body;
     if (!repoUrl) return res.status(400).json({ message: "repoUrl is required" });
@@ -32,39 +33,99 @@ async function analyzeRepo(req, res, next) {
     const { owner: ghOwner, repo: repoName } = parseRepoUrl(repoUrl);
     const ownerId = req.user?._id || req.user?.id || "demo_owner";
 
+    // 1. Clone repo into ephemeral directory (with 3-tier fallback)
+    const cloneResult = await cloneRepo(repoUrl);
+    localPath = cloneResult.localPath;
+
+    // 2. Parse tree & walk files
+    const allFiles = walkRepo(localPath);
+    const tree = getTree(localPath);
+    const treeSummary = allFiles.map((f) => f.path).join("\n");
+
+    // 3. Detect project stack details
+    const projectDetails = detectProjectDetails(allFiles, repoName);
+
+    // 4. Generate all core specification documents & diagrams in this single request
+    const readmeDoc = generateReadmeDoc({ repoName, files: allFiles, tree: treeSummary });
+    const architectureDoc = generateArchitectureDoc({ repoName, files: allFiles });
+    const architectureMermaid = generateArchitectureMermaid({ repoName, files: allFiles });
+    const agentsDoc = generateAgentsDoc({ repoName, files: allFiles });
+    const taskBreakdownDoc = generateTaskBreakdownDoc({ repoName, files: allFiles });
+    const flowchartDoc = generateFlowchartMermaid({ repoName, files: allFiles });
+
+    // 5. AST & Function extraction
+    const parsedFunctions = await explainFunctions(allFiles, { limit: 30 });
+
+    const specDocs = {
+      readme: readmeDoc,
+      architecture: architectureDoc,
+      agents: agentsDoc,
+      taskBreakdown: taskBreakdownDoc,
+    };
+
+    // Store essential file headers directly in DB so serverless never loses them
+    const persistedFiles = allFiles.slice(0, 150).map((f) => ({
+      path: f.path,
+      extension: f.extension,
+      size: f.size,
+      content: f.content,
+    }));
+
     let repoDoc;
+    const repoPayload = {
+      owner: ownerId,
+      repoUrl,
+      repoName: repoName || "repository",
+      status: "ready",
+      fileTree: tree,
+      files: persistedFiles,
+      projectType: projectDetails.projectType,
+      entryPoint: projectDetails.entryPoint,
+      specDocs,
+    };
+
     if (isDbConnected()) {
-      repoDoc = await Repo.create({
-        owner: ownerId,
-        repoUrl,
-        repoName: repoName || "expense-tracker",
-        status: "cloning",
-      });
+      repoDoc = await Repo.create(repoPayload);
     } else {
-      repoDoc = await memoryStore.createRepo({
-        owner: ownerId,
-        repoUrl,
-        repoName: repoName || "expense-tracker",
-        status: "cloning",
-      });
+      repoDoc = await memoryStore.createRepo(repoPayload);
     }
 
-    const { localPath } = await cloneRepo(repoUrl);
+    // 6. Precompute and persist AnalysisResult records for instant tab loading
+    const resultsToSave = [
+      { type: "readme", content: readmeDoc },
+      { type: "architecture", content: architectureMermaid },
+      { type: "agents", content: agentsDoc },
+      { type: "taskBreakdown", content: taskBreakdownDoc },
+      { type: "flowchart", content: flowchartDoc },
+      { type: "functionExplain", content: parsedFunctions },
+    ];
 
-    repoDoc.status = "parsing";
-    await repoDoc.save();
+    for (const r of resultsToSave) {
+      if (isDbConnected()) {
+        await AnalysisResult.create({
+          repo: repoDoc._id,
+          owner: repoDoc.owner,
+          type: r.type,
+          content: r.content,
+        });
+      } else {
+        await memoryStore.createAnalysisResult({
+          repo: repoDoc._id,
+          type: r.type,
+          content: r.content,
+        });
+      }
+    }
 
-    const tree = getTree(localPath);
-    repoDoc.fileTree = tree;
-    repoDoc.status = "ready";
-    repoDoc.set("localPath", localPath, { strict: false });
-    await repoDoc.save();
+    // 7. Ephemeral cleanup: delete cloned source code from /tmp immediately
+    cleanupRepo(localPath);
 
-    res.status(201).json({
+    return res.status(201).json({
       repo: repoDoc,
-      message: "Repo cloned and parsed successfully",
+      message: "Repository analyzed and specifications generated successfully",
     });
   } catch (err) {
+    if (localPath) cleanupRepo(localPath);
     logger.error(`analyzeRepo failed: ${err.message}`);
     return res.status(500).json({ message: err.message || "Failed to analyze repository" });
   }

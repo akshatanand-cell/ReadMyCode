@@ -221,7 +221,7 @@ const Home = () => {
           {/* Privacy Trust Callout */}
           <div className="mt-6 flex items-center justify-center gap-2 text-xs text-text-muted">
             <Shield className="w-3.5 h-3.5 text-emerald-400" />
-            <span>We don't store your code. Analysis runs in transient memory and purges on completion.</span>
+            <span>We delete cloned source code immediately after analysis. Generated docs and diagrams are saved to your account.</span>
           </div>
         </div>
       </section>

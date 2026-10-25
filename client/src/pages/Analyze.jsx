@@ -733,7 +733,7 @@ const Analyze = () => {
                   <p className="text-sm text-text-muted">
                     {selectedFile
                       ? `${(selectedFile.size / 1024 / 1024).toFixed(2)} MB`
-                      : 'or click to browse. Supports .zip, .tar.gz (max 50MB)'}
+                      : 'or click to browse. Supports .zip (max 4MB on Vercel). For larger codebases, paste the GitHub URL.'}
                   </p>
                 </div>
 
