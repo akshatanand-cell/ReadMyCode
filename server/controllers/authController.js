@@ -7,6 +7,7 @@ const { JWT_SECRET, JWT_EXPIRES_IN, CLIENT_URL, GITHUB_CLIENT_ID, GITHUB_CLIENT_
 const { sendPasswordResetEmail } = require("../services/emailService");
 const logger = require("../utils/logger");
 const memoryStore = require("../utils/memoryStore");
+const { encryptToken, decryptToken } = require("../utils/cryptoUtil");
 
 function isDbConnected() {
   return mongoose.connection.readyState === 1;
@@ -157,7 +158,7 @@ async function updateProfile(req, res, next) {
 
       if (name) user.name = name;
       if (password) user.password = password; // pre-save hook re-hashes
-      if (githubToken !== undefined) user.githubToken = githubToken;
+      if (githubToken !== undefined) user.githubToken = githubToken ? encryptToken(githubToken) : null;
       if (githubUsername !== undefined) user.githubUsername = githubUsername;
       await user.save();
     } else {
@@ -167,13 +168,13 @@ async function updateProfile(req, res, next) {
           _id: req.user._id,
           name: name || req.user.name,
           email: email || req.user.email,
-          githubToken: githubToken || null,
+          githubToken: githubToken ? encryptToken(githubToken) : null,
           githubUsername: githubUsername || null,
         };
       } else {
         if (name) user.name = name;
         if (email) user.email = email;
-        if (githubToken !== undefined) user.githubToken = githubToken;
+        if (githubToken !== undefined) user.githubToken = githubToken ? encryptToken(githubToken) : null;
         if (githubUsername !== undefined) user.githubUsername = githubUsername;
       }
       memoryStore.saveStore();
@@ -482,7 +483,7 @@ async function githubAuth(req, res, next) {
         user.githubId = githubId;
         user.githubUsername = githubUsername;
         if (avatar) user.avatar = avatar;
-        if (ghToken) user.githubToken = ghToken;
+        if (ghToken) user.githubToken = encryptToken(ghToken);
         await user.save();
       } else {
         const randomPass = crypto.randomBytes(16).toString("hex");
@@ -493,7 +494,7 @@ async function githubAuth(req, res, next) {
           githubId,
           githubUsername,
           avatar,
-          githubToken: ghToken || null,
+          githubToken: ghToken ? encryptToken(ghToken) : null,
         });
       }
     } else {
@@ -501,7 +502,7 @@ async function githubAuth(req, res, next) {
       if (user) {
         user.githubUsername = githubUsername;
         user.avatar = avatar;
-        if (ghToken) user.githubToken = ghToken;
+        if (ghToken) user.githubToken = encryptToken(ghToken);
         memoryStore.saveStore();
       } else {
         user = await memoryStore.createUser({
@@ -511,7 +512,7 @@ async function githubAuth(req, res, next) {
         });
         user.githubUsername = githubUsername;
         user.avatar = avatar;
-        if (ghToken) user.githubToken = ghToken;
+        if (ghToken) user.githubToken = encryptToken(ghToken);
         memoryStore.saveStore();
       }
     }
@@ -550,7 +551,8 @@ async function getUserGithubRepos(req, res, next) {
       ? await User.findById(req.user._id).select("+githubToken")
       : await memoryStore.findUserById(req.user._id);
 
-    const token = req.query.token || userDoc?.githubToken || req.user?.githubToken || process.env.GITHUB_TOKEN;
+    const rawToken = req.query.token || userDoc?.githubToken || req.user?.githubToken || process.env.GITHUB_TOKEN;
+    const token = decryptToken(rawToken);
     const username =
       req.query.username ||
       userDoc?.githubUsername ||

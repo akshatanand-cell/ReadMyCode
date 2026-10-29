@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
+const { encryptToken, decryptToken } = require("../utils/cryptoUtil");
 
 const userSchema = new mongoose.Schema(
   {
@@ -8,7 +9,11 @@ const userSchema = new mongoose.Schema(
     password: { type: String, required: true, minlength: 6, select: false },
     avatar: { type: String },
     githubId: { type: String },
-    githubToken: { type: String, select: false },
+    githubToken: { 
+      type: String, 
+      select: false,
+      set: (val) => (val ? encryptToken(val) : val)
+    },
     githubUsername: { type: String, trim: true },
     securityQuestion: { type: String, trim: true },
     securityAnswer: { type: String, select: false },
@@ -32,6 +37,10 @@ userSchema.methods.comparePassword = function (candidate) {
 userSchema.methods.compareSecurityAnswer = function (candidate) {
   if (!this.securityAnswer || !candidate) return false;
   return bcrypt.compare(candidate.toLowerCase().trim(), this.securityAnswer);
+};
+
+userSchema.methods.getDecryptedGithubToken = function () {
+  return decryptToken(this.githubToken);
 };
 
 module.exports = mongoose.model("User", userSchema);

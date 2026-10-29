@@ -31,13 +31,13 @@ const Register = () => {
       const envClientId = import.meta.env.VITE_GITHUB_CLIENT_ID;
       if (envClientId) {
         const redirectUri = `${window.location.origin}/auth/github/callback`;
-        window.location.href = `https://github.com/login/oauth/authorize?client_id=${envClientId}&scope=repo,read:user,user:email&redirect_uri=${encodeURIComponent(redirectUri)}`;
+        window.location.href = `https://github.com/login/oauth/authorize?client_id=${envClientId}&scope=read:user,user:email,public_repo&redirect_uri=${encodeURIComponent(redirectUri)}`;
         return;
       }
       const res = await authAPI.getGithubConfig();
       if (res.data?.clientId) {
         const redirectUri = `${window.location.origin}/auth/github/callback`;
-        window.location.href = `https://github.com/login/oauth/authorize?client_id=${res.data.clientId}&scope=repo,read:user,user:email&redirect_uri=${encodeURIComponent(redirectUri)}`;
+        window.location.href = `https://github.com/login/oauth/authorize?client_id=${res.data.clientId}&scope=read:user,user:email,public_repo&redirect_uri=${encodeURIComponent(redirectUri)}`;
         return;
       }
     } catch {

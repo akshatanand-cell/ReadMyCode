@@ -6,12 +6,46 @@ const INJECTION_PATTERNS = [
   /<\|im_end\|>/gi,
 ];
 
+// Patterns for automated secrets and PII redacting before LLM transmission
+const SECRET_REDACTION_PATTERNS = [
+  // AWS Access Keys
+  { pattern: /\bAKIA[0-9A-Z]{16}\b/g, label: "[REDACTED_AWS_KEY]" },
+  // GitHub Personal Access Tokens / Fine-grained / OAuth
+  { pattern: /\b(?:gh[pousr]_[A-Za-z0-9_]{36,255}|github_pat_[A-Za-z0-9_]{82})\b/g, label: "[REDACTED_GITHUB_TOKEN]" },
+  // Slack Tokens
+  { pattern: /\bxox[baprs]-[0-9a-zA-Z-]{10,72}\b/g, label: "[REDACTED_SLACK_TOKEN]" },
+  // Stripe API Keys
+  { pattern: /\b[rs]k_(?:live|test)_[0-9a-zA-Z]{24,99}\b/g, label: "[REDACTED_STRIPE_KEY]" },
+  // OpenAI / Anthropic / xAI keys
+  { pattern: /\b(?:sk-[a-zA-Z0-9]{32,}|xai-[a-zA-Z0-9]{40,})\b/g, label: "[REDACTED_AI_API_KEY]" },
+  // Private Keys (RSA / DSA / EC / OPENSSH / PGP)
+  { pattern: /-----BEGIN (?:[A-Z\s]+)?PRIVATE KEY-----[\s\S]*?-----END (?:[A-Z\s]+)?PRIVATE KEY-----/gi, label: "[REDACTED_PRIVATE_KEY]" },
+  // JWT tokens (3 segments base64url)
+  { pattern: /\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b/g, label: "[REDACTED_JWT_TOKEN]" },
+  // Generic password/secret assignments in config/code
+  { pattern: /(?:password|passwd|secret|api_key|apikey|auth_token|db_pass)\s*[:=]\s*["']([^"'\r\n]{4,})["']/gi, replace: (match, p1) => match.replace(p1, "[REDACTED_SECRET]") },
+  // PII: Email addresses in comments or headers
+  { pattern: /\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b/g, label: "[REDACTED_EMAIL]" },
+];
+
 function sanitizePromptInput(text) {
   if (typeof text !== "string") return text;
   let cleaned = text;
+
+  // 1. Redact prompt injections
   for (const pattern of INJECTION_PATTERNS) {
     cleaned = cleaned.replace(pattern, "[FILTERED_UNTRUSTED_INSTRUCTION]");
   }
+
+  // 2. Automated Secrets & PII Redactor
+  for (const item of SECRET_REDACTION_PATTERNS) {
+    if (item.label) {
+      cleaned = cleaned.replace(item.pattern, item.label);
+    } else if (item.replace) {
+      cleaned = cleaned.replace(item.pattern, item.replace);
+    }
+  }
+
   return cleaned;
 }
 const { XAI_API_KEY, AI_MODEL } = require("../config/env");
@@ -267,4 +301,4 @@ async function callAIJson(prompt, opts = {}) {
   }
 }
 
-module.exports = { callAI, callAIJson };
+module.exports = { callAI, callAIJson, sanitizePromptInput };

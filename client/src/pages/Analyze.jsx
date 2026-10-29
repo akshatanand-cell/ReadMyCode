@@ -73,6 +73,7 @@ const Analyze = () => {
   const [githubToken, setGithubToken] = useState(() => localStorage.getItem('github_token') || '');
   const [customRepoName, setCustomRepoName] = useState('');
   const [isPrivate, setIsPrivate] = useState(false);
+  const [hasAuthorizedCodebase, setHasAuthorizedCodebase] = useState(true);
   const fileInputRef = useRef(null);
 
   // Vercel-style GitHub Integration State
@@ -704,10 +705,25 @@ const Analyze = () => {
                         </button>
                       </div>
 
+                      <div className="p-3 rounded-xl bg-card border border-border/80 space-y-1.5">
+                        <label className="flex items-start gap-2.5 cursor-pointer text-xs text-text-secondary select-none">
+                          <input
+                            type="checkbox"
+                            checked={hasAuthorizedCodebase}
+                            onChange={(e) => setHasAuthorizedCodebase(e.target.checked)}
+                            className="mt-0.5 w-4 h-4 rounded border-border bg-background-secondary text-primary focus:ring-primary shrink-0"
+                          />
+                          <span className="leading-relaxed">
+                            I confirm I have the authority or permissible license to process this codebase.
+                            Code is processed ephemerally and <strong className="text-text-primary">never used for model training</strong>.
+                          </span>
+                        </label>
+                      </div>
+
                       <Button
                         type="submit"
                         isLoading={isLoading}
-                        disabled={!githubUrl.trim()}
+                        disabled={!githubUrl.trim() || !hasAuthorizedCodebase}
                         className="w-full text-sm font-semibold min-h-[44px]" 
                       rightIcon={<ArrowRight className="w-4 h-4" />}
                     >
@@ -860,7 +876,22 @@ const Analyze = () => {
                   )}
                 </div>
 
-                <Button type="submit" isLoading={isLoading} disabled={!selectedFile} className="w-full">
+                <div className="p-3 rounded-xl bg-card border border-border/80 space-y-1.5">
+                  <label className="flex items-start gap-2.5 cursor-pointer text-xs text-text-secondary select-none">
+                    <input
+                      type="checkbox"
+                      checked={hasAuthorizedCodebase}
+                      onChange={(e) => setHasAuthorizedCodebase(e.target.checked)}
+                      className="mt-0.5 w-4 h-4 rounded border-border bg-background-secondary text-primary focus:ring-primary shrink-0"
+                    />
+                    <span className="leading-relaxed">
+                      I confirm I have the authority to process this repository codebase.
+                      Files are processed ephemerally in /tmp and <strong className="text-text-primary">never used for AI training</strong>.
+                    </span>
+                  </label>
+                </div>
+
+                <Button type="submit" isLoading={isLoading} disabled={!selectedFile || !hasAuthorizedCodebase} className="w-full">
                   {pushToGithub ? 'Upload, Analyze & Push to GitHub' : 'Upload & Analyze'}
                   <ArrowRight className="w-4 h-4" />
                 </Button>

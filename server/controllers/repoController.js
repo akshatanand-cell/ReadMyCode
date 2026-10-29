@@ -18,6 +18,7 @@ const {
 } = require("../services/specDocGenerator");
 const { explainFunctions } = require("../services/functionExplainer");
 const { callAI } = require("../services/aiService");
+const { decryptToken } = require("../utils/cryptoUtil");
 const logger = require("../utils/logger");
 const memoryStore = require("../utils/memoryStore");
 
@@ -269,7 +270,8 @@ async function analyzeZip(req, res, next) {
     // 5. Automatic GitHub Push & Deployment Link Generation
     let githubPushInfo = null;
     const shouldPush = req.body.pushToGithub === "true" || req.body.pushToGithub === true;
-    const githubToken = req.body.githubToken || req.user?.githubToken || process.env.GITHUB_TOKEN;
+    const rawPushToken = req.body.githubToken || req.user?.githubToken || process.env.GITHUB_TOKEN;
+    const githubToken = decryptToken(rawPushToken);
 
     if (shouldPush && githubToken) {
       try {
@@ -463,13 +465,15 @@ async function pushRepoToGitHub(req, res, next) {
     const { id } = req.params;
     const { token, githubToken: ghToken, repoName, isPrivate, description } = req.body;
 
-    const githubToken =
+    const rawGithubToken =
       (token && token.trim()) ||
       (ghToken && ghToken.trim()) ||
       (req.body.githubToken && req.body.githubToken.trim()) ||
       req.headers["x-github-token"] ||
       req.user?.githubToken ||
       process.env.GITHUB_TOKEN;
+
+    const githubToken = decryptToken(rawGithubToken);
 
     if (!githubToken) {
       return res.status(400).json({
@@ -556,7 +560,8 @@ async function getRepoCommits(req, res, next) {
     if (repoUrl && repoUrl.includes("github.com")) {
       try {
         const { owner, repo } = parseRepoUrl(repoUrl);
-        const token = req.user?.githubToken || process.env.GITHUB_TOKEN;
+        const rawToken = req.user?.githubToken || process.env.GITHUB_TOKEN;
+        const token = decryptToken(rawToken);
         const headers = {
           "User-Agent": "ReadMyCode-App",
           Accept: "application/vnd.github+json",

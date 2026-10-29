@@ -29,7 +29,7 @@ export default function GithubConnectModal({ isOpen, onClose, onSuccess }) {
   const handlePasskeyAuth = () => {
     if (clientId) {
       const redirectUri = `${window.location.origin}/auth/github/callback`;
-      const url = `https://github.com/login/oauth/authorize?client_id=${clientId}&scope=repo,read:user,user:email&redirect_uri=${encodeURIComponent(redirectUri)}`;
+      const url = `https://github.com/login/oauth/authorize?client_id=${clientId}&scope=read:user,user:email,public_repo&redirect_uri=${encodeURIComponent(redirectUri)}`;
       window.location.href = url;
     } else {
       setError('OAuth Client ID not detected yet. Follow the 3-step setup below or use Instant Username connect.');
@@ -245,12 +245,12 @@ export default function GithubConnectModal({ isOpen, onClose, onSuccess }) {
                     GitHub Personal Access Token
                   </label>
                   <a
-                    href="https://github.com/settings/tokens/new?scopes=repo,read:user,user:email&description=ReadMyCode%20Integration"
+                    href="https://github.com/settings/tokens/new?scopes=public_repo,read:user,user:email&description=ReadMyCode%20Integration"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 text-[11px] text-primary hover:underline font-medium"
                   >
-                    Generate Token <ExternalLink className="w-3 h-3" />
+                    Generate Read-Only Token <ExternalLink className="w-3 h-3" />
                   </a>
                 </div>
                 <input

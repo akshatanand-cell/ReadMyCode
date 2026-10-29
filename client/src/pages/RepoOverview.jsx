@@ -24,6 +24,7 @@ import {
   Rocket,
   Download,
   Share2,
+  ShieldAlert,
 } from 'lucide-react';
 import Card from '@/components/common/Card';
 import Button from '@/components/common/Button';
@@ -400,6 +401,18 @@ const RepoOverview = () => {
             >
               Download Specs (.md)
             </Button>
+          </div>
+        </div>
+
+
+        {/* AI Accuracy & Legal Notice Card */}
+        <div className="flex items-start gap-3 p-4 rounded-xl bg-card border border-border text-xs text-text-secondary">
+          <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+          <div className="space-y-0.5">
+            <span className="font-semibold text-text-primary">AI Accuracy & Legal Notice:</span>{' '}
+            <span className="text-text-muted leading-relaxed">
+              Outputs are generated automatically via static AST analysis and AI models (Grok / Llama) and provided &ldquo;as-is&rdquo;. ReadMyCode does not guarantee error-free code analysis or bug detection. Engineering teams should review generated specifications prior to critical production deployment. Cloned code is processed ephemerally in volatile memory and is never used to train foundation AI models.
+            </span>
           </div>
         </div>
 
