@@ -69,4 +69,10 @@ const aiLimiter = createRateLimiter({
   message: "AI document generation quota reached. Please wait a few minutes before generating more documentation.",
 });
 
-module.exports = { createRateLimiter, analysisLimiter, aiLimiter };
+const authLimiter = createRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: "Too many authentication attempts. Please wait 15 minutes before trying again.",
+});
+
+module.exports = { createRateLimiter, analysisLimiter, aiLimiter, authLimiter };

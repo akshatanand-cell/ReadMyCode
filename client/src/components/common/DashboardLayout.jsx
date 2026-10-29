@@ -23,6 +23,7 @@ import Navbar from './Navbar';
 import Badge from './Badge';
 import Button from './Button';
 import ProgressBar from './ProgressBar';
+import AskAiDrawer from './AskAiDrawer';
 
 const repoTabs = [
   { path: 'readme', label: 'README', icon: FileText },
@@ -244,6 +245,11 @@ const DashboardLayout = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <Outlet />
         </div>
+
+        {/* Floating Grok AI Codebase Assistant */}
+        {isRepoPage && (
+          <AskAiDrawer repoId={id} repoName={currentRepo?.repoName || currentRepo?.name} />
+        )}
       </div>
     </div>
   );

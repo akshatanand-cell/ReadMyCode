@@ -22,6 +22,8 @@ import {
   Bot,
   ListTodo,
   Rocket,
+  Download,
+  Share2,
 } from 'lucide-react';
 import Card from '@/components/common/Card';
 import Button from '@/components/common/Button';
@@ -92,8 +94,43 @@ const RepoOverview = () => {
   };
 
   const openPushModal = () => {
+    if (!user || user.id === 'demo_guest' || user._id === 'demo_guest') {
+      toast('Sign in or connect your GitHub account to export repositories.', {
+        icon: '🔒',
+        duration: 4000,
+      });
+      navigate('/login');
+      return;
+    }
     setPushRepoName(currentRepo?.name || currentRepo?.repoName || 'repository');
     setIsPushModalOpen(true);
+  };
+
+  const handleDownloadUnifiedDocs = () => {
+    const title = currentRepo?.repoName || currentRepo?.name || 'Codebase';
+    const content = `# ${title} — Complete Codebase Specifications\n\n` +
+      `> Generated automatically by [ReadMyCode](https://readmycode.vercel.app)\n\n---\n\n` +
+      `## 1. README\n\n${currentRepo?.specDocs?.readme || 'No README generated.'}\n\n---\n\n` +
+      `## 2. Architecture Map\n\n${currentRepo?.specDocs?.architecture || 'No architecture generated.'}\n\n---\n\n` +
+      `## 3. Agent Rules & Constitution\n\n${currentRepo?.specDocs?.agents || 'No agents doc generated.'}\n\n---\n\n` +
+      `## 4. Phased Task Roadmap\n\n${currentRepo?.specDocs?.taskBreakdown || 'No task breakdown generated.'}\n`;
+
+    const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${title.toLowerCase().replace(/\s+/g, '-')}-DOCUMENTATION.md`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success('Downloaded complete DOCUMENTATION.md!');
+  };
+
+  const handleCopyShareLink = () => {
+    const shareUrl = window.location.origin + `/repo/${id}`;
+    navigator.clipboard.writeText(shareUrl);
+    toast.success('Shareable link copied to clipboard!');
   };
 
   const handlePushToGithub = async (e) => {
@@ -328,6 +365,43 @@ const RepoOverview = () => {
             })()}
           </div>
         )}
+
+        {/* Workspace Quick Actions Bar */}
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-card border border-border rounded-xl px-4 py-3">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-xs font-semibold text-text-primary">
+              Interactive Workspace
+            </span>
+            <span className="text-[11px] text-text-muted hidden sm:inline">
+              · 8 specialized views (Architecture, Flowcharts, Specs, Functions)
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleCopyShareLink}
+              leftIcon={<Share2 className="w-3.5 h-3.5" />}
+              className="text-xs"
+              aria-label="Copy public shareable link"
+            >
+              Share Link
+            </Button>
+
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleDownloadUnifiedDocs}
+              leftIcon={<Download className="w-3.5 h-3.5" />}
+              className="text-xs text-emerald-400 hover:text-emerald-300"
+              aria-label="Download complete documentation"
+            >
+              Download Specs (.md)
+            </Button>
+          </div>
+        </div>
 
         {/* Feature Navigation Cards */}
         {(currentRepo.status === 'ready' || currentRepo.status === 'completed' || currentRepo.status === ANALYSIS_STATUS.COMPLETED) && (

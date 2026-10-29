@@ -140,13 +140,11 @@ const Home = () => {
             <Button
               variant="secondary"
               size="lg"
-              className="w-full sm:w-auto min-h-[44px] text-base px-6 font-medium"
-              onClick={() => {
-                const element = document.getElementById('before-after-preview');
-                if (element) element.scrollIntoView({ behavior: 'smooth' });
-              }}
+              className="w-full sm:w-auto min-h-[44px] text-base px-6 font-medium border border-border hover:border-emerald-500/50"
+              onClick={() => navigate('/repo/demo-react-app')}
             >
-              See example
+              Explore Live Demo
+              <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </div>
 
@@ -206,6 +204,21 @@ const Home = () => {
                     <span>{ex.label}</span>
                   </button>
                 ))}
+                <span className="text-border">|</span>
+                <button
+                  type="button"
+                  onClick={() => navigate('/repo/demo-react-app')}
+                  className="text-[11px] text-teal-400 hover:text-teal-300 font-medium hover:underline focus-visible:outline-none"
+                >
+                  ⚡ React Demo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate('/repo/demo-python-api')}
+                  className="text-[11px] text-sky-400 hover:text-sky-300 font-medium hover:underline focus-visible:outline-none"
+                >
+                  🧠 Python RAG Demo
+                </button>
                 <span className="text-border">|</span>
                 <button
                   type="button"

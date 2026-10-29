@@ -16,12 +16,20 @@ try {
 }
 
 function parseRepoUrl(repoUrl) {
-  if (!repoUrl) throw new Error("Invalid GitHub repo URL");
-  const match = repoUrl.match(/github\.com[/:]([^/]+)\/([^/.]+)(\.git)?/i);
+  if (!repoUrl || typeof repoUrl !== "string") throw new Error("Invalid GitHub repo URL");
+  
+  // Security: Block shell metacharacters and command injection
+  if (/[;&|`$><\n\r]/.test(repoUrl)) {
+    throw new Error("Malicious characters detected in GitHub repository URL");
+  }
+
+  const match = repoUrl.match(/github\.com[/:]([a-zA-Z0-9_.-]+)\/([a-zA-Z0-9_.-]+?)(?:\.git|\/|$)/i);
   if (!match) {
     const parts = repoUrl.replace(/^https?:\/\//, "").split("/").filter(Boolean);
-    if (parts.length >= 2) return { owner: parts[parts.length - 2], repo: parts[parts.length - 1] };
-    return { owner: "user", repo: repoUrl.replace(/[^a-zA-Z0-9_-]/g, "") || "repository" };
+    if (parts.length >= 2 && /^[a-zA-Z0-9_.-]+$/.test(parts[parts.length - 2]) && /^[a-zA-Z0-9_.-]+$/.test(parts[parts.length - 1])) {
+      return { owner: parts[parts.length - 2], repo: parts[parts.length - 1].replace(/\.git$/i, "") };
+    }
+    throw new Error("Invalid GitHub repository URL format. Example: https://github.com/owner/repository");
   }
   return { owner: match[1], repo: match[2] };
 }

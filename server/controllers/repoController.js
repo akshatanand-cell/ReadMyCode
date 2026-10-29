@@ -17,6 +17,7 @@ const {
   generateFlowchartMermaid,
 } = require("../services/specDocGenerator");
 const { explainFunctions } = require("../services/functionExplainer");
+const { callAI } = require("../services/aiService");
 const logger = require("../utils/logger");
 const memoryStore = require("../utils/memoryStore");
 
@@ -634,6 +635,53 @@ async function getRepoCommits(req, res, next) {
   }
 }
 
+async function chatWithRepoAi(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { message } = req.body;
+
+    if (!message || typeof message !== "string") {
+      return res.status(400).json({ message: "A question message is required." });
+    }
+
+    const repoDoc = await fetchRepoHelper(id, req.user?._id);
+    if (!repoDoc) {
+      return res.status(404).json({ message: "Repository not found." });
+    }
+
+    const repoName = repoDoc.repoName || repoDoc.name || "Repository";
+    const projectType = repoDoc.projectType || "General";
+    const entryPoint = repoDoc.entryPoint || "Not specified";
+    const fileList = (repoDoc.files || []).slice(0, 30).map((f) => f.path).join(", ");
+    const readmeSnippet = repoDoc.specDocs?.readme ? repoDoc.specDocs.readme.slice(0, 1500) : "";
+
+    const systemPrompt = `You are ReadMyCode AI Assistant, an expert technical architect and senior software engineer.
+You are helping the user understand and explore the codebase for "${repoName}".
+Repository Details:
+- Project Type: ${projectType}
+- Main Entry Point: ${entryPoint}
+- Key Files: ${fileList || "Standard repository layout"}
+
+Context from README:
+${readmeSnippet}
+
+Provide clear, concise, actionable technical answers with markdown formatting and code examples where helpful.
+If you don't know a detail with certainty, give the most probable architectural explanation based on standard patterns.`;
+
+    const userPrompt = `User Question: "${message}"\n\nPlease provide a clear, helpful technical explanation.`;
+    const reply = await callAI(userPrompt, { system: systemPrompt, maxTokens: 800 });
+
+    return res.json({
+      reply,
+      timestamp: new Date().toISOString(),
+      repoName,
+    });
+  } catch (err) {
+    logger.error(`chatWithRepoAi failed: ${err.message}`);
+    next(err);
+  }
+}
+
 module.exports = {
   analyzeRepo,
   analyzeZip,
@@ -643,4 +691,5 @@ module.exports = {
   deleteRepo,
   pushRepoToGitHub,
   getRepoCommits,
+  chatWithRepoAi,
 };

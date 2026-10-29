@@ -8,10 +8,11 @@ const {
   deleteRepo,
   pushRepoToGitHub,
   getRepoCommits,
+  chatWithRepoAi,
 } = require("../controllers/repoController");
 const { protect } = require("../middleware/authMiddleware");
 const upload = require("../middleware/uploadMiddleware");
-const { analysisLimiter } = require("../middleware/rateLimiter");
+const { analysisLimiter, aiLimiter } = require("../middleware/rateLimiter");
 
 const router = express.Router();
 
@@ -21,6 +22,7 @@ router.post("/upload", upload.single("file"), analysisLimiter, analyzeZip);
 router.get("/", listRepos);
 router.get("/:id", getRepo);
 router.get("/:id/commits", getRepoCommits);
+router.post("/:id/chat", aiLimiter, chatWithRepoAi);
 router.post("/:id/analyze", analysisLimiter, reanalyzeRepo);
 router.post("/:id/push-to-github", pushRepoToGitHub);
 router.delete("/:id", deleteRepo);

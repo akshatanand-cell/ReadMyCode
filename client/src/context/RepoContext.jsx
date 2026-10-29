@@ -1,3 +1,4 @@
+import { getDemoRepo } from '@/utils/demoRepos';
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { repoAPI, analysisAPI } from '@/services/api';
 import toast from 'react-hot-toast';
@@ -15,6 +16,14 @@ export function RepoProvider({ children }) {
   const fetchRepoDetails = useCallback(async (id) => {
     if (!id || id === 'undefined') return null;
     setIsLoading(true);
+
+    // 0. Interactive Demo Sandbox Check (Instant unauthenticated rendering)
+    const demo = getDemoRepo(id);
+    if (demo) {
+      setCurrentRepo(demo);
+      setIsLoading(false);
+      return demo;
+    }
 
     // 1. Instant cache check to eliminate blank screen & latency
     let cachedRepo = null;
