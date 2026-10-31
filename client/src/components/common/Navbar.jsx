@@ -16,6 +16,7 @@ const Navbar = ({ _onMenuToggle, _isSidebarOpen }) => {
 
   const navLinks = [
     { path: '/', label: 'Overview' },
+    { path: '/pricing', label: 'Pricing' },
     { path: '/analyze', label: 'Analyze', auth: true },
     { path: '/dashboard', label: 'Dashboard', auth: true },
     { path: '/history', label: 'History', auth: true },

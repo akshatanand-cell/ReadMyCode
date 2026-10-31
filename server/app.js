@@ -12,6 +12,8 @@ const docsRoutes = require("./routes/docsRoutes");
 const diagramRoutes = require("./routes/diagramRoutes");
 const debugRoutes = require("./routes/debugRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
+const badgeRoutes = require("./routes/badgeRoutes");
+const billingRoutes = require("./routes/billingRoutes");
 
 const app = express();
 
@@ -102,6 +104,8 @@ app.use("/api/docs", docsRoutes);
 app.use("/api/diagrams", diagramRoutes);
 app.use("/api/debug", debugRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/badge", badgeRoutes);
+app.use("/api/billing", billingRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

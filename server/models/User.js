@@ -19,6 +19,11 @@ const userSchema = new mongoose.Schema(
     securityAnswer: { type: String, select: false },
     resetPasswordToken: { type: String, select: false },
     resetPasswordExpire: { type: Date, select: false },
+    plan: { type: String, enum: ["free", "pro", "enterprise"], default: "free" },
+    monthlyScans: { type: Number, default: 0 },
+    lastScanReset: { type: Date, default: Date.now },
+    stripeCustomerId: { type: String },
+    stripeSubscriptionId: { type: String },
   },
   { timestamps: true }
 );

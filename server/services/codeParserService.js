@@ -187,6 +187,76 @@ function parseJsFile(filePath, content) {
   return result;
 }
 
+function parseGoFile(filePath, content) {
+  const result = { filePath, functions: [], classes: [], imports: [], exports: [], parseError: null };
+  const lines = content.split("\n");
+  const goFnRegex = /func\s+(?:\((?:[a-zA-Z0-9_*]+\s+)?([a-zA-Z0-9_*]+)\)\s+)?([a-zA-Z0-9_]+)\s*\(([^)]*)\)(?:\s*([^{]+))?/;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (/^\s*import\s+/.test(line)) {
+      result.imports.push(line.trim());
+    }
+    const match = line.match(goFnRegex);
+    if (match) {
+      const receiver = match[1] || "";
+      const name = match[2];
+      const rawParams = match[3] || "";
+      const returnType = match[4] ? match[4].trim() : "void";
+      const params = rawParams
+        .split(",")
+        .map((p) => p.trim())
+        .filter(Boolean);
+
+      const fnName = receiver ? `(${receiver}).${name}` : name;
+      const code = lines.slice(i, Math.min(lines.length, i + 30)).join("\n");
+      result.functions.push({
+        name: fnName,
+        params,
+        returnType,
+        loc: i + 1,
+        code: code.slice(0, 1000),
+        complexity: estimateComplexity(code),
+      });
+    }
+  }
+  return result;
+}
+
+function parseRustFile(filePath, content) {
+  const result = { filePath, functions: [], classes: [], imports: [], exports: [], parseError: null };
+  const lines = content.split("\n");
+  const rustFnRegex = /(?:pub(?:\([^)]+\))?\s+)?(?:async\s+)?fn\s+([a-zA-Z0-9_]+)(?:<[^>]+>)?\s*\(([^)]*)\)(?:\s*->\s*([^{]+))?/;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (/^\s*use\s+/.test(line)) {
+      result.imports.push(line.trim());
+    }
+    const match = line.match(rustFnRegex);
+    if (match) {
+      const name = match[1];
+      const rawParams = match[2] || "";
+      const returnType = match[3] ? match[3].trim() : "()";
+      const params = rawParams
+        .split(",")
+        .map((p) => p.trim())
+        .filter((p) => p && !p.startsWith("&self") && p !== "self");
+
+      const code = lines.slice(i, Math.min(lines.length, i + 30)).join("\n");
+      result.functions.push({
+        name,
+        params,
+        returnType,
+        loc: i + 1,
+        code: code.slice(0, 1000),
+        complexity: estimateComplexity(code),
+      });
+    }
+  }
+  return result;
+}
+
 function parseFile(filePath, content) {
   const ext = path.extname(filePath).toLowerCase();
 
@@ -196,7 +266,13 @@ function parseFile(filePath, content) {
   if ([".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs"].includes(ext)) {
     return parseJsFile(filePath, content);
   }
-  if ([".java", ".cpp", ".c", ".h", ".hpp", ".cs", ".go", ".rs", ".php", ".rb"].includes(ext)) {
+  if (ext === ".go") {
+    return parseGoFile(filePath, content);
+  }
+  if (ext === ".rs") {
+    return parseRustFile(filePath, content);
+  }
+  if ([".java", ".cpp", ".c", ".h", ".hpp", ".cs", ".php", ".rb"].includes(ext)) {
     return parseGenericCodeFile(filePath, content);
   }
 

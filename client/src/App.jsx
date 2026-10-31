@@ -20,6 +20,7 @@ const GithubCallback = lazy(() => import('@/pages/GithubCallback'));
 const Terms = lazy(() => import('@/pages/Terms'));
 const Privacy = lazy(() => import('@/pages/Privacy'));
 const Help = lazy(() => import('@/pages/Help'));
+const Pricing = lazy(() => import('@/pages/Pricing'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 
 // Lazy load dashboard pages
@@ -54,6 +55,7 @@ function App() {
         {/* Public routes with main Layout */}
         <Route element={<Layout />}>
           <Route path="/" element={<Home />} />
+          <Route path="/pricing" element={<Pricing />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/help" element={<Help />} />

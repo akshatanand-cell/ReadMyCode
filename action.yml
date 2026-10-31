@@ -1,0 +1,24 @@
+name: 'ReadMyCode Auto-Documentation'
+description: 'Automatically analyzes your codebase and generates README, ARCHITECTURE, AGENTS, and TASK_BREAKDOWN specifications.'
+author: 'Akshat Anand'
+branding:
+  icon: 'book-open'
+  color: 'green'
+
+inputs:
+  github_token:
+    description: 'GitHub token for pushing updated specifications'
+    required: false
+    default: ${{ github.token }}
+  output_dir:
+    description: 'Directory where generated specifications will be saved'
+    required: false
+    default: '.'
+  api_endpoint:
+    description: 'ReadMyCode API endpoint'
+    required: false
+    default: 'https://readmycode.vercel.app'
+
+runs:
+  using: 'node20'
+  main: 'scripts/actionRunner.js'

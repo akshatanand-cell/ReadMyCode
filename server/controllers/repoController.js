@@ -5,6 +5,8 @@ const AdmZip = require("adm-zip");
 const simpleGit = require("simple-git");
 const Repo = require("../models/Repo");
 const AnalysisResult = require("../models/AnalysisResult");
+const User = require("../models/User");
+const memoryStore = require("../utils/memoryStore");
 const { cloneRepo, cleanupRepo, parseRepoUrl, pushCodeToGitHub } = require("../services/githubService");
 const { walkRepo, getTree } = require("../utils/fileWalker");
 const {
@@ -20,7 +22,6 @@ const { explainFunctions } = require("../services/functionExplainer");
 const { callAI } = require("../services/aiService");
 const { decryptToken } = require("../utils/cryptoUtil");
 const logger = require("../utils/logger");
-const memoryStore = require("../utils/memoryStore");
 
 function isDbConnected() {
   return mongoose.connection.readyState === 1;
@@ -34,6 +35,22 @@ async function analyzeRepo(req, res, next) {
 
     const { owner: ghOwner, repo: repoName } = parseRepoUrl(repoUrl);
     const ownerId = req.user?._id || req.user?.id || "demo_owner";
+
+    // Usage metering & limit enforcement
+    if (ownerId && ownerId !== "demo_owner" && ownerId !== "demo_guest") {
+      const userDoc = isDbConnected() ? await User.findById(ownerId) : await memoryStore.findUserById(ownerId);
+      if (userDoc) {
+        const plan = userDoc.plan || "free";
+        const scans = userDoc.monthlyScans || 0;
+        if (plan === "free" && scans >= 15) {
+          return res.status(403).json({
+            message: "Monthly scan limit reached for Free Tier (15/15 scans). Upgrade to Pro for unlimited scans and priority AI compute.",
+            code: "SCAN_LIMIT_REACHED",
+            upgradeUrl: "/pricing",
+          });
+        }
+      }
+    }
 
     // 1. Clone repo into ephemeral directory (with 3-tier fallback)
     const cloneResult = await cloneRepo(repoUrl);
@@ -123,6 +140,19 @@ async function analyzeRepo(req, res, next) {
     // 7. Ephemeral cleanup: delete cloned source code from /tmp immediately
     cleanupRepo(localPath);
 
+    // Increment user scan counter
+    if (ownerId && ownerId !== "demo_owner" && ownerId !== "demo_guest") {
+      if (isDbConnected()) {
+        await User.findByIdAndUpdate(ownerId, { $inc: { monthlyScans: 1 } });
+      } else {
+        const u = await memoryStore.findUserById(ownerId);
+        if (u) {
+          u.monthlyScans = (u.monthlyScans || 0) + 1;
+          memoryStore.saveStore();
+        }
+      }
+    }
+
     return res.status(201).json({
       repo: repoDoc,
       message: "Repository analyzed and specifications generated successfully",
@@ -138,6 +168,25 @@ async function analyzeZip(req, res, next) {
   const zipPath = req.file?.path;
   try {
     if (!zipPath) return res.status(400).json({ message: "No ZIP file uploaded" });
+
+    const ownerId = req.user?._id || req.user?.id || "demo_owner";
+
+    // Usage metering & limit enforcement
+    if (ownerId && ownerId !== "demo_owner" && ownerId !== "demo_guest") {
+      const userDoc = isDbConnected() ? await User.findById(ownerId) : await memoryStore.findUserById(ownerId);
+      if (userDoc) {
+        const plan = userDoc.plan || "free";
+        const scans = userDoc.monthlyScans || 0;
+        if (plan === "free" && scans >= 15) {
+          if (zipPath) fs.unlink(zipPath, () => {});
+          return res.status(403).json({
+            message: "Monthly scan limit reached for Free Tier (15/15 scans). Upgrade to Pro for unlimited scans and priority AI compute.",
+            code: "SCAN_LIMIT_REACHED",
+            upgradeUrl: "/pricing",
+          });
+        }
+      }
+    }
 
     const repoName = path.basename(req.file.originalname, ".zip") || "codebase-project";
     const extractDir = zipPath.replace(/\.zip$/i, "");
@@ -310,6 +359,19 @@ async function analyzeZip(req, res, next) {
 
     cleanupRepo(extractDir);
     fs.unlink(zipPath, () => {});
+
+    // Increment user scan counter
+    if (ownerId && ownerId !== "demo_owner" && ownerId !== "demo_guest") {
+      if (isDbConnected()) {
+        await User.findByIdAndUpdate(ownerId, { $inc: { monthlyScans: 1 } });
+      } else {
+        const u = await memoryStore.findUserById(ownerId);
+        if (u) {
+          u.monthlyScans = (u.monthlyScans || 0) + 1;
+          memoryStore.saveStore();
+        }
+      }
+    }
 
     res.status(201).json({
       repo: repoDoc,

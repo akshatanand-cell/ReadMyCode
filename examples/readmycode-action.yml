@@ -1,0 +1,28 @@
+# .github/workflows/readmycode.yml
+# Continuous Codebase Documentation with ReadMyCode
+name: ReadMyCode Docs
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  document:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Generate Codebase Specs
+        uses: akshatanand-cell/ReadMyCode@main
+
+      - name: Commit & Push Updated Documentation
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add ARCHITECTURE.md AGENTS.md TASK_BREAKDOWN.md || true
+          git diff --quiet && git diff --staged --quiet || (git commit -m "docs: automated spec update via ReadMyCode [skip ci]" && git push)

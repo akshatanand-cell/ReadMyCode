@@ -25,6 +25,8 @@ import {
   Download,
   Share2,
   ShieldAlert,
+  Award,
+  Terminal,
 } from 'lucide-react';
 import Card from '@/components/common/Card';
 import Button from '@/components/common/Button';
@@ -58,6 +60,8 @@ const RepoOverview = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisProgress, setAnalysisProgress] = useState(0);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isBadgeModalOpen, setIsBadgeModalOpen] = useState(false);
+  const [badgeTab, setBadgeTab] = useState('badge');
   const [isPushModalOpen, setIsPushModalOpen] = useState(false);
   const [pushRepoName, setPushRepoName] = useState('');
   const [pushToken, setPushToken] = useState('');
@@ -383,6 +387,17 @@ const RepoOverview = () => {
             <Button
               variant="secondary"
               size="sm"
+              onClick={() => setIsBadgeModalOpen(true)}
+              leftIcon={<Award className="w-3.5 h-3.5 text-amber-400" />}
+              className="text-xs hover:border-amber-500/40"
+              aria-label="Get README Badge and GitHub Action"
+            >
+              Badge & CI
+            </Button>
+
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={handleCopyShareLink}
               leftIcon={<Share2 className="w-3.5 h-3.5" />}
               className="text-xs"
@@ -640,6 +655,122 @@ const RepoOverview = () => {
                 Delete Repository
               </Button>
             </div>
+          </div>
+        </Modal>
+
+        {/* Badge & GitHub Action Modal */}
+        <Modal
+          isOpen={isBadgeModalOpen}
+          onClose={() => setIsBadgeModalOpen(false)}
+          title="Developer Distribution: Badge & GitHub Action"
+        >
+          <div className="space-y-4">
+            <div className="flex border-b border-border text-xs font-medium">
+              <button
+                type="button"
+                onClick={() => setBadgeTab('badge')}
+                className={`pb-2 px-3 border-b-2 transition-colors flex items-center gap-1.5 ${
+                  badgeTab === 'badge'
+                    ? 'border-primary text-primary font-semibold'
+                    : 'border-transparent text-text-muted hover:text-text-primary'
+                }`}
+              >
+                <Award className="w-3.5 h-3.5 text-amber-400" />
+                README Badge
+              </button>
+              <button
+                type="button"
+                onClick={() => setBadgeTab('action')}
+                className={`pb-2 px-3 border-b-2 transition-colors flex items-center gap-1.5 ${
+                  badgeTab === 'action'
+                    ? 'border-primary text-primary font-semibold'
+                    : 'border-transparent text-text-muted hover:text-text-primary'
+                }`}
+              >
+                <Terminal className="w-3.5 h-3.5 text-emerald-400" />
+                GitHub Action
+              </button>
+            </div>
+
+            {badgeTab === 'badge' ? (
+              <div className="space-y-3">
+                <p className="text-xs text-text-secondary leading-relaxed">
+                  Showcase that your repository is documented with ReadMyCode. Paste this markdown badge into your project's <code className="text-primary font-mono">README.md</code>.
+                </p>
+
+                <div className="p-3 bg-background-secondary border border-border rounded-xl flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-text-muted">Preview:</span>
+                    <img src="/badge.svg" alt="documented with ReadMyCode" className="h-5 inline-block" />
+                  </div>
+                  <span className="text-[11px] text-emerald-400 font-mono">Live SVG</span>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">
+                    Markdown Snippet
+                  </label>
+                  <div className="relative">
+                    <pre className="p-3 bg-card border border-border rounded-xl text-xs font-mono text-emerald-400 overflow-x-auto select-all">
+{`[![Documented with ReadMyCode](${window.location.origin}/badge.svg)](${window.location.origin}/repo/${id})`}
+                    </pre>
+                  </div>
+                </div>
+
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="w-full text-xs"
+                  leftIcon={<Copy className="w-3.5 h-3.5" />}
+                  onClick={() => {
+                    navigator.clipboard.writeText(`[![Documented with ReadMyCode](${window.location.origin}/badge.svg)](${window.location.origin}/repo/${id})`);
+                    toast.success('Badge markdown copied to clipboard!');
+                  }}
+                >
+                  Copy Badge Markdown
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-xs text-text-secondary leading-relaxed">
+                  Automate continuous documentation updates on every git push or PR using the official ReadMyCode GitHub Action.
+                </p>
+
+                <div className="space-y-1">
+                  <label className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">
+                    .github/workflows/readmycode.yml
+                  </label>
+                  <pre className="p-3 bg-card border border-border rounded-xl text-[11px] font-mono text-text-secondary overflow-x-auto select-all max-h-48">
+{`name: ReadMyCode Docs
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  document:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: akshatanand-cell/ReadMyCode@main`}
+                  </pre>
+                </div>
+
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="w-full text-xs"
+                  leftIcon={<Copy className="w-3.5 h-3.5" />}
+                  onClick={() => {
+                    const snippet = `name: ReadMyCode Docs\non:\n  push:\n    branches: [main]\npermissions:\n  contents: write\njobs:\n  document:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - uses: akshatanand-cell/ReadMyCode@main`;
+                    navigator.clipboard.writeText(snippet);
+                    toast.success('GitHub Action YAML copied to clipboard!');
+                  }}
+                >
+                  Copy Workflow YAML
+                </Button>
+              </div>
+            )}
           </div>
         </Modal>
 

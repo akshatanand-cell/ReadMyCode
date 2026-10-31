@@ -15,6 +15,11 @@ const Footer = () => {
             </h3>
             <ul className="space-y-2">
               <li>
+                <Link to="/pricing" className="hover:text-text-primary transition-colors text-emerald-400 font-medium">
+                  Pricing & Plans
+                </Link>
+              </li>
+              <li>
                 <Link to="/analyze" className="hover:text-text-primary transition-colors">
                   Analyze Repository
                 </Link>
