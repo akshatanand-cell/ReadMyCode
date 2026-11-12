@@ -24,6 +24,7 @@ const userSchema = new mongoose.Schema(
     lastScanReset: { type: Date, default: Date.now },
     stripeCustomerId: { type: String },
     stripeSubscriptionId: { type: String },
+    newsletterSubscribed: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

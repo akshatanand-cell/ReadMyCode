@@ -144,7 +144,7 @@ export default function Profile() {
           <div className="relative">
             <img
               src={formData.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(formData.name || 'User')}&background=6366f1&color=fff&size=128`}
-              alt={formData.name}
+              alt={formData.name || 'User profile photo'}
               className="w-24 h-24 rounded-full object-cover border-4 border-primary/20"
             />
             {isEditing && (

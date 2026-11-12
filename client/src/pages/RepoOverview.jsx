@@ -581,7 +581,7 @@ const RepoOverview = () => {
                   <div className="flex items-start sm:items-center gap-3 min-w-0">
                     <img
                       src={commit.authorAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(commit.author || 'Dev')}`}
-                      alt={commit.author}
+                      alt={commit.author || 'Commit author avatar'}
                       className="w-7 h-7 rounded-full object-cover shrink-0 border border-border mt-0.5 sm:mt-0"
                     />
                     <div className="min-w-0">

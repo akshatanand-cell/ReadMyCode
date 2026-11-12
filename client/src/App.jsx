@@ -19,6 +19,9 @@ const ForgotPassword = lazy(() => import('@/pages/ForgotPassword'));
 const GithubCallback = lazy(() => import('@/pages/GithubCallback'));
 const Terms = lazy(() => import('@/pages/Terms'));
 const Privacy = lazy(() => import('@/pages/Privacy'));
+const Refund = lazy(() => import('@/pages/Refund'));
+const CookiePolicy = lazy(() => import('@/pages/CookiePolicy'));
+const Unsubscribe = lazy(() => import('@/pages/Unsubscribe'));
 const Help = lazy(() => import('@/pages/Help'));
 const Pricing = lazy(() => import('@/pages/Pricing'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
@@ -58,6 +61,9 @@ function App() {
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/privacy" element={<Privacy />} />
+          <Route path="/refund" element={<Refund />} />
+          <Route path="/cookies" element={<CookiePolicy />} />
+          <Route path="/unsubscribe" element={<Unsubscribe />} />
           <Route path="/help" element={<Help />} />
         </Route>
 

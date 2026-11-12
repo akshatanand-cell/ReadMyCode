@@ -192,11 +192,24 @@ async function findAnalysis(repoId, type) {
   return matches.length > 0 ? matches[matches.length - 1] : null;
 }
 
+function deleteUserAndRepos(userId) {
+  const uid = String(userId);
+  memoryDb.users.delete(uid);
+  for (const [rid, r] of memoryDb.repos.entries()) {
+    if (String(r.owner) === uid) {
+      memoryDb.repos.delete(rid);
+    }
+  }
+  memoryDb.analysisResults = memoryDb.analysisResults.filter((a) => String(a.owner) !== uid);
+  saveStore();
+}
+
 module.exports = {
   memoryDb,
   findUserByEmail,
   findUserById,
   createUser,
+  deleteUserAndRepos,
   createRepo,
   findRepoById,
   listUserRepos,

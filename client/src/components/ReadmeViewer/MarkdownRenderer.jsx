@@ -145,7 +145,7 @@ const MarkdownRenderer = ({ content, className }) => {
           img: ({ src, alt }) => (
             <img
               src={src}
-              alt={alt}
+              alt={alt || "Rendered documentation preview"}
               className="rounded-xl max-w-full h-auto my-4 border border-border shadow-md"
               loading="lazy"
             />

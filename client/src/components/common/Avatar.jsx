@@ -42,7 +42,7 @@ const Avatar = ({
     return (
       <img
         src={src}
-        alt={alt || name}
+        alt={alt || name || 'User avatar'}
         className={cn('rounded-full object-cover', sizes[size], className)}
         onError={() => setError(true)}
       />

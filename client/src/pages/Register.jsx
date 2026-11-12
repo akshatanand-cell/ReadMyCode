@@ -21,6 +21,9 @@ const Register = () => {
     securityQuestion: SECURITY_QUESTIONS[0],
     securityAnswer: '',
   });
+  const [agreeTerms, setAgreeTerms] = useState(false);
+  const [agreeAge, setAgreeAge] = useState(false);
+  const [optInMarketing, setOptInMarketing] = useState(false);
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -60,6 +63,12 @@ const Register = () => {
     } else if (formData.securityAnswer.trim().length < 2) {
       newErrors.securityAnswer = 'Security answer must be at least 2 characters';
     }
+    if (!agreeTerms) {
+      newErrors.agreeTerms = 'You must accept the Terms of Service, Privacy Policy, and Refund Policy';
+    }
+    if (!agreeAge) {
+      newErrors.agreeAge = 'You must confirm you are at least 13 years old (or 16+ in the EEA)';
+    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -68,7 +77,7 @@ const Register = () => {
     e.preventDefault();
     if (!validate()) return;
     setIsLoading(true);
-    const result = await register(formData);
+    const result = await register({ ...formData, optInMarketing });
     setIsLoading(false);
     if (result.success) navigate('/dashboard');
   };
@@ -205,11 +214,67 @@ const Register = () => {
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <input type="checkbox" required className="w-4 h-4 rounded border-border bg-background-secondary text-primary focus:ring-primary" />
-              <span className="text-sm text-text-secondary">
-                I agree to the <Link to="/terms" className="text-primary hover:underline">Terms</Link> and <Link to="/privacy" className="text-primary hover:underline">Privacy Policy</Link>
-              </span>
+            {/* Explicit Statutory Consents */}
+            <div className="space-y-3 pt-2 border-t border-border/60 text-xs text-text-secondary">
+              <div>
+                <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={agreeTerms}
+                    onChange={(e) => setAgreeTerms(e.target.checked)}
+                    className="mt-0.5 w-4 h-4 rounded border-border bg-background-secondary text-primary focus:ring-primary shrink-0"
+                  />
+                  <span className="leading-relaxed">
+                    I agree to the{' '}
+                    <Link to="/terms" target="_blank" className="text-primary hover:underline font-medium">
+                      Terms of Service
+                    </Link>
+                    ,{' '}
+                    <Link to="/privacy" target="_blank" className="text-primary hover:underline font-medium">
+                      Privacy Policy
+                    </Link>
+                    , and{' '}
+                    <Link to="/refund" target="_blank" className="text-primary hover:underline font-medium">
+                      Refund Policy
+                    </Link>
+                    .
+                  </span>
+                </label>
+                {errors.agreeTerms && (
+                  <p className="mt-1 text-xs text-error pl-6">{errors.agreeTerms}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={agreeAge}
+                    onChange={(e) => setAgreeAge(e.target.checked)}
+                    className="mt-0.5 w-4 h-4 rounded border-border bg-background-secondary text-primary focus:ring-primary shrink-0"
+                  />
+                  <span className="leading-relaxed">
+                    I confirm I am <strong className="text-text-primary">at least 13 years of age</strong> (or 16+ in the European Economic Area / UK).
+                  </span>
+                </label>
+                {errors.agreeAge && (
+                  <p className="mt-1 text-xs text-error pl-6">{errors.agreeAge}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={optInMarketing}
+                    onChange={(e) => setOptInMarketing(e.target.checked)}
+                    className="mt-0.5 w-4 h-4 rounded border-border bg-background-secondary text-primary focus:ring-primary shrink-0"
+                  />
+                  <span className="leading-relaxed text-text-muted">
+                    Send me developer release notes, AST documentation tips, and occasional offers (Optional — unsubscribe anytime in 1 click).
+                  </span>
+                </label>
+              </div>
             </div>
 
             <Button type="submit" isLoading={isLoading} className="w-full">

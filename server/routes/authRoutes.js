@@ -5,6 +5,7 @@ const {
   getMe,
   logout,
   updateProfile,
+  deleteMyAccount,
   forgotPassword,
   resetPassword,
   getSecurityQuestion,
@@ -23,6 +24,9 @@ router.post("/login", authLimiter, login);
 router.get("/me", protect, getMe);
 router.post("/logout", protect, logout);
 router.put("/profile", protect, updateProfile);
+router.delete("/me", protect, deleteMyAccount);
+router.delete("/account", protect, deleteMyAccount);
+router.delete("/delete-account", protect, deleteMyAccount);
 router.post("/forgot-password", authLimiter, forgotPassword);
 router.post("/reset-password", authLimiter, resetPassword);
 router.post("/security-question", getSecurityQuestion);

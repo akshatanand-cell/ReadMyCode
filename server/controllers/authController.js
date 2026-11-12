@@ -3,8 +3,10 @@ const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
 const User = require("../models/User");
+const Repo = require("../models/Repo");
+const AnalysisResult = require("../models/AnalysisResult");
 const { JWT_SECRET, JWT_EXPIRES_IN, CLIENT_URL, GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET } = require("../config/env");
-const { sendPasswordResetEmail } = require("../services/emailService");
+const { sendPasswordResetEmail, sendWelcomeOfferEmail } = require("../services/emailService");
 const logger = require("../utils/logger");
 const memoryStore = require("../utils/memoryStore");
 const { encryptToken, decryptToken } = require("../utils/cryptoUtil");
@@ -54,6 +56,12 @@ async function register(req, res, next) {
     }
 
     const token = signToken(user._id);
+
+    // Automated onboarding & welcome email with offer
+    sendWelcomeOfferEmail({
+      to: user.email,
+      name: user.name,
+    }).catch((err) => logger.warn(`Welcome email skipped/failed: ${err.message}`));
 
     res.status(201).json({
       token,
@@ -621,12 +629,38 @@ async function getUserGithubRepos(req, res, next) {
   }
 }
 
+async function deleteMyAccount(req, res, next) {
+  try {
+    const userId = req.user?._id;
+    if (!userId || userId === "demo_guest") {
+      return res.json({ success: true, message: "Demo guest session cleared." });
+    }
+
+    if (isDbConnected()) {
+      await Repo.deleteMany({ owner: userId });
+      await AnalysisResult.deleteMany({ owner: userId });
+      await User.findByIdAndDelete(userId);
+    } else {
+      memoryStore.deleteUserAndRepos(userId);
+    }
+
+    logger.info(`GDPR Erasure: Permanently deleted account and all codebase data for user ${userId}`);
+    return res.json({
+      success: true,
+      message: "Your account, analyzed repositories, and documentation have been permanently deleted in accordance with GDPR Article 17.",
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   register,
   login,
   getMe,
   logout,
   updateProfile,
+  deleteMyAccount,
   forgotPassword,
   resetPassword,
   getSecurityQuestion,
