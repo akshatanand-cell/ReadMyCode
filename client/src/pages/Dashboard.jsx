@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Code2,
@@ -13,6 +13,7 @@ import {
   ArrowRight,
   Plus,
   Activity,
+  Sparkles,
 } from 'lucide-react';
 import { dashboardAPI } from '@/services/api';
 import Card, { CardHeader, CardTitle, CardDescription, CardContent } from '@/components/common/Card';
@@ -22,6 +23,11 @@ import { SkeletonCard } from '@/components/common/Skeleton';
 import EmptyState from '@/components/common/EmptyState';
 import ContributionHeatmap from '@/components/common/ContributionHeatmap';
 import { cn } from '@/utils/helpers';
+import { useAuth } from '@/context/AuthContext';
+import toast from 'react-hot-toast';
+import axios from 'axios';
+
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 const StatCard = ({ icon: Icon, label, value, color }) => (
   <Card>
@@ -40,10 +46,39 @@ const StatCard = ({ icon: Icon, label, value, color }) => (
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const { user, checkAuth } = useAuth();
   const [stats, setStats] = useState(null);
   const [recentRepos, setRecentRepos] = useState([]);
   const [activity, setActivity] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [justUpgraded, setJustUpgraded] = useState(false);
+
+  useEffect(() => {
+    const upgraded = searchParams.get('upgraded');
+    const sessionId = searchParams.get('session_id');
+    const plan = searchParams.get('plan');
+
+    if (upgraded === 'true' || sessionId) {
+      setJustUpgraded(true);
+      const verify = async () => {
+        try {
+          if (sessionId && sessionId.startsWith('cs_')) {
+            await axios.get(`${API_BASE}/api/billing/verify-session?session_id=${sessionId}`);
+          }
+          await checkAuth();
+          toast.success(`🎉 Welcome to ${plan ? plan.toUpperCase() : 'PRO'}! Unlimited scans activated.`, {
+            duration: 6000,
+          });
+        } catch (_err) {
+          await checkAuth();
+        } finally {
+          window.history.replaceState({}, '', '/dashboard');
+        }
+      };
+      verify();
+    }
+  }, [searchParams, checkAuth]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -96,13 +131,37 @@ const Dashboard = () => {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-text-primary">Dashboard</h1>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl font-bold text-text-primary">Dashboard</h1>
+            {user?.plan && user.plan !== 'free' && (
+              <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-bold uppercase tracking-wider border border-emerald-500/30">
+                {user.plan}
+              </span>
+            )}
+          </div>
           <p className="text-text-secondary">Overview of your repositories and analyses</p>
         </div>
         <Button onClick={() => navigate('/analyze')} leftIcon={<Plus className="w-4 h-4" />}>
           New Analysis
         </Button>
       </div>
+
+      {justUpgraded && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between gap-4"
+        >
+          <div className="flex items-center gap-3">
+            <Sparkles className="w-5 h-5 text-emerald-400 shrink-0" />
+            <div>
+              <h3 className="text-sm font-bold text-text-primary">Payment Confirmed — Welcome to Pro!</h3>
+              <p className="text-xs text-text-secondary">Your account is upgraded. Enjoy unlimited repo scans, private repositories, and priority AI compute.</p>
+            </div>
+          </div>
+          <Button size="sm" variant="ghost" onClick={() => setJustUpgraded(false)}>Dismiss</Button>
+        </motion.div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard icon={Folder} label="Total Repositories" value={stats?.totalRepos || 0} color="bg-primary/10 text-primary" />

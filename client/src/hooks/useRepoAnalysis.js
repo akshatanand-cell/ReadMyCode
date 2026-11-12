@@ -55,6 +55,15 @@ export function useRepoAnalysis() {
   const categorizeError = (rawMessage = '', statusCode) => {
     const msg = String(rawMessage).toLowerCase();
     
+    if (msg.includes('scan limit') || msg.includes('limit reached') || msg.includes('15/15') || msg.includes('upgrade to pro')) {
+      return {
+        type: 'SCAN_LIMIT',
+        title: 'Monthly Scan Limit Reached (15/15)',
+        message: 'You have used all 15 free repository scans for this month. Upgrade to Pro for unlimited scans, private repo support, and priority compute.',
+        actionLabel: 'Upgrade to Pro',
+        actionType: 'pricing',
+      };
+    }
     if (msg.includes('rate limit') || statusCode === 429) {
       return {
         type: 'RATE_LIMIT',

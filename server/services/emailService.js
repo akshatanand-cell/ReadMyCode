@@ -140,10 +140,35 @@ async function sendNewsletterWelcomeEmail({ to, unsubscribeToken }) {
   });
 }
 
+async function sendPaymentSuccessEmail({ to, name, planName, amount, currency, gateway }) {
+  const footer = getEmailFooter("billing", to);
+  return sendEmail({
+    to,
+    subject: `Payment Confirmed: Welcome to ReadMyCode ${planName}!`,
+    html: `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 520px; margin: 0 auto; padding: 24px; background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; color: #0f172a;">
+        <div style="display: inline-block; padding: 4px 10px; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 9999px; color: #059669; font-size: 11px; font-weight: 700; text-transform: uppercase; margin-bottom: 12px;">Payment Confirmed</div>
+        <h2 style="margin: 0 0 12px 0; color: #0f172a; font-size: 22px;">You're upgraded to ${planName}!</h2>
+        <p style="font-size: 14px; color: #334155; line-height: 1.6;">Hi ${name || "Developer"}, thank you for supporting ReadMyCode! Your payment of <strong>${currency.toUpperCase()} ${amount}</strong> via ${gateway.toUpperCase()} has been processed successfully.</p>
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 20px 0;">
+          <p style="margin: 0 0 8px 0; font-size: 13px; color: #64748b;"><strong>Plan:</strong> ${planName}</p>
+          <p style="margin: 0 0 8px 0; font-size: 13px; color: #64748b;"><strong>Status:</strong> Active (Unlimited Scans & Priority Compute)</p>
+          <p style="margin: 0; font-size: 13px; color: #64748b;"><strong>14-Day Guarantee:</strong> Full refund if you're not completely satisfied.</p>
+        </div>
+        <div style="margin: 24px 0; text-align: center;">
+          <a href="${APP_URL}/dashboard" style="display: inline-block; background: #0071e3; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-weight: 600; font-size: 14px;">Open Workspace & Analyze Repos</a>
+        </div>
+        ${footer}
+      </div>
+    `,
+  });
+}
+
 module.exports = {
   sendEmail,
   sendPasswordResetEmail,
   sendOtpVerificationEmail,
   sendWelcomeOfferEmail,
   sendNewsletterWelcomeEmail,
+  sendPaymentSuccessEmail,
 };

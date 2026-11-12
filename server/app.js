@@ -67,7 +67,17 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.json({ limit: "5mb" }));
+app.use(
+  express.json({
+    limit: "5mb",
+    verify: (req, res, buf) => {
+      // Retain raw request buffer for Stripe and Razorpay HMAC webhook signature verification
+      if (req.originalUrl && req.originalUrl.includes("/billing/")) {
+        req.rawBody = buf;
+      }
+    },
+  })
+);
 app.use(express.urlencoded({ extended: true, limit: "5mb" }));
 if (NODE_ENV !== "test") app.use(morgan("dev"));
 

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Sparkles } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import Button from './Button';
@@ -153,6 +154,19 @@ const Navbar = ({ _onMenuToggle, _isSidebarOpen }) => {
                   Sign Out
                 </button>
 
+                {(!user?.plan || user.plan === 'free') ? (
+                  <Link
+                    to="/pricing"
+                    className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20 transition-all shadow-sm"
+                  >
+                    <Sparkles className="w-3 h-3 text-emerald-400" />
+                    <span>Upgrade</span>
+                  </Link>
+                ) : (
+                  <span className="hidden sm:inline-block px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase tracking-wider border border-emerald-500/30">
+                    {user.plan}
+                  </span>
+                )}
                 <div className="h-4 w-[1px] bg-border mx-1 hidden sm:block" />
 
                 <Dropdown

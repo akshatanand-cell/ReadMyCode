@@ -21,7 +21,9 @@
     "mongoose": "^8.5.0",
     "morgan": "^1.10.0",
     "multer": "^1.4.5-lts.1",
-    "simple-git": "^3.25.0"
+    "razorpay": "^2.9.8",
+    "simple-git": "^3.25.0",
+    "stripe": "^23.1.0"
   },
   "devDependencies": {
     "eslint": "^10.13.0",

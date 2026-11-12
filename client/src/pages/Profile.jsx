@@ -161,6 +161,13 @@ export default function Profile() {
           <div className="flex-1">
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-bold text-text-primary">{user.name}</h1>
+              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider ${
+                user.plan && user.plan !== 'free'
+                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                  : 'bg-card text-text-muted border border-border'
+              }`}>
+                {user.plan || 'Free'}
+              </span>
               {user.hasGithubToken && (
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                   <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">

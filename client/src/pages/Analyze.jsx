@@ -408,6 +408,11 @@ const Analyze = () => {
                               Test with Express.js
                             </Button>
                           )}
+                          {errorDetails.actionType === 'pricing' && (
+                            <Button size="sm" onClick={() => navigate('/pricing')} className="bg-emerald-500 hover:bg-emerald-400 text-black font-semibold shadow-md">
+                              Upgrade to Pro ($12 / mo)
+                            </Button>
+                          )}
                           <Button size="sm" variant="ghost" onClick={clearError}>
                             Dismiss
                           </Button>
