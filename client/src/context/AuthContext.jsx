@@ -43,14 +43,22 @@ export function AuthProvider({ children }) {
         setIsAuthenticated(true);
       }
     } catch (error) {
-      // Preserve saved login from localStorage so user is never logged out unexpectedly
-      const savedUser = localStorage.getItem('user');
-      if (savedUser) {
-        try {
-          setUser(JSON.parse(savedUser));
-          setIsAuthenticated(true);
-        } catch {
-          // ignore
+      if (error.response?.status === 401) {
+        // Token expired or invalid on the server: clear stale credentials
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setUser(null);
+        setIsAuthenticated(false);
+      } else {
+        // Temporary network or offline error: keep cached profile
+        const savedUser = localStorage.getItem('user');
+        if (savedUser) {
+          try {
+            setUser(JSON.parse(savedUser));
+            setIsAuthenticated(true);
+          } catch {
+            // ignore
+          }
         }
       }
     } finally {

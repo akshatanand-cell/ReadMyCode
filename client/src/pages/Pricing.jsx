@@ -19,11 +19,20 @@ import {
 } from 'lucide-react';
 import Card from '@/components/common/Card';
 import Button from '@/components/common/Button';
+import AuthUpgradeModal from '@/components/common/AuthUpgradeModal';
 import { useAuth } from '@/context/AuthContext';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
+
+const PLAN_DETAILS = {
+  free: { id: 'free', name: 'Free Developer', price: 0 },
+  pro: { id: 'pro', name: 'Pro Engineer', price: 12, interval: 'month' },
+  team: { id: 'team', name: 'Team & Enterprise', price: 49, interval: 'month' },
+  pack_50: { id: 'pack_50', name: '50-Scans Power Pack', price: 19, interval: 'one-time' },
+  lifetime: { id: 'lifetime', name: 'Lifetime License', price: 99, interval: 'one-time' },
+};
 
 const loadRazorpayScript = () => {
   return new Promise((resolve) => {
@@ -47,12 +56,23 @@ export default function Pricing() {
     stripe: { enabled: false, publishableKey: '' },
     razorpay: { enabled: false, keyId: '' },
   });
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [pendingPlan, setPendingPlan] = useState(null);
   const [usage, setUsage] = useState({
     plan: 'free',
     monthlyScans: 0,
     scanLimit: 15,
     hasStripeSubscription: false,
   });
+
+  const handleAuthSuccess = async () => {
+    setAuthModalOpen(false);
+    if (pendingPlan?.id) {
+      setTimeout(() => {
+        handleSelectPlan(pendingPlan.id);
+      }, 150);
+    }
+  };
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -78,18 +98,20 @@ export default function Pricing() {
   }, []);
 
   const handleSelectPlan = async (planId, gatewayChoice = null) => {
-    if (!user || user.id === 'demo_guest' || user._id === 'demo_guest') {
-      toast('Please sign in to select a plan.', { icon: '🔒' });
-      navigate('/login');
-      return;
-    }
-
     if (planId === 'free') {
       navigate('/analyze');
       return;
     }
 
     const token = localStorage.getItem('token');
+    const isGuest = !token || !user || user.id === 'demo_guest' || user._id === 'demo_guest';
+
+    if (isGuest) {
+      setPendingPlan(PLAN_DETAILS[planId] || { id: planId, name: planId.toUpperCase(), price: 12 });
+      setAuthModalOpen(true);
+      return;
+    }
+
     setLoadingPlan(planId);
 
     // Prefer Razorpay if user explicitly picked INR / Razorpay
@@ -176,6 +198,12 @@ export default function Pricing() {
         setUsage((prev) => ({ ...prev, plan: planId, scanLimit: 'unlimited' }));
       }
     } catch (err) {
+      if (err.response?.status === 401) {
+        localStorage.removeItem('token');
+        setPendingPlan(PLAN_DETAILS[planId] || { id: planId, name: planId.toUpperCase(), price: 12 });
+        setAuthModalOpen(true);
+        return;
+      }
       toast.error(err.response?.data?.message || 'Failed to initiate checkout.');
     } finally {
       setLoadingPlan(null);
@@ -610,6 +638,14 @@ export default function Pricing() {
           </div>
         </div>
       </div>
+
+      {/* Auth Upgrade Modal for Visitors and Guests */}
+      <AuthUpgradeModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        plan={pendingPlan}
+        onAuthenticated={handleAuthSuccess}
+      />
     </div>
   );
 }

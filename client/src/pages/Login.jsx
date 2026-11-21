@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Code2, Github, Mail, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
@@ -11,6 +11,8 @@ import { cn } from '@/utils/helpers';
 
 const Login = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectUrl = searchParams.get('redirect') || '/dashboard';
   const { login } = useAuth();
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [errors, setErrors] = useState({});
@@ -54,7 +56,7 @@ const Login = () => {
     setIsLoading(true);
     const result = await login(formData);
     setIsLoading(false);
-    if (result.success) navigate('/dashboard');
+    if (result.success) navigate(redirectUrl);
   };
 
   return (

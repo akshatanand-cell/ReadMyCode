@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Code2, Mail, User, Eye, EyeOff, Github, ShieldQuestion, KeyRound } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
@@ -12,6 +12,8 @@ import { cn } from '@/utils/helpers';
 
 const Register = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectUrl = searchParams.get('redirect') || '/dashboard';
   const { register } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
@@ -79,7 +81,7 @@ const Register = () => {
     setIsLoading(true);
     const result = await register({ ...formData, optInMarketing });
     setIsLoading(false);
-    if (result.success) navigate('/dashboard');
+    if (result.success) navigate(redirectUrl);
   };
 
   return (
